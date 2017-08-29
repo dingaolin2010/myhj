@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 机柜-->
+		<!-- 公共 动态分页查询条件  -->
+	<sql id="RMSRack_pageSql">
+		  <if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+	
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMSRack_userSql">
+	   ( select  distinct
+		       hum.MANATYPE
+			  from HJFIX_USER hu 
+			  left join  HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+			   where  hu.userName =#{user_id}
+		      <if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>      
+		      )                                    
+	</sql>	
+	
+
+
+
+	<!-- 6.1.3.1	机柜查询 -->
+	<select id="getAllRacksSqlIdInRMSRack" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	SELECT RACKID rack_id,
+		       DEVICECODE rack_code,
+		       DEVICENAME rack_name,
+		       SUPNAME name_std,
+		       dbo.sf('COM_RACK', 'VENDORMODELID', VENDORMODELID, null) rack_type,
+		       dbo.sf('COM_RACK', 'VENDORID', VENDORID, null) vendor,
+		       dbo.sf('COM_RACK', 'MANATYPE', MANATYPE, null) disp_dept,
+		       (select dbo.sf('COM_MROOM', 'DUTYDEPART', m.DUTYDEPART, null)
+		          from com_mroom m
+		         where m.mroomid = com_rack.mroomid) maintain_dept,
+		       RACKLENGTH / 1000 thick,
+		       RACKWIDTH / 1000 width,
+		       RACKHEIGHT / 1000 height,
+		       DEVICEHAO location_no,
+		       x0 x_coord,
+		       y0 y_coord,
+		       dbo.sf('COM_RACK', 'MROOMID', MROOMID, null) belong_room,
+		       MROOMID room_id,
+		       qr_code
+		  FROM COM_RACK
+		   inner join (  
+		   			 select 
+		   			 	RACKID RACKID0001, 
+		   			 	rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by DEVICECODE) + 0 AS rownum_,
+		                            RACKID
+		                       from COM_RACK WHERE 1 = 1 
+			]]>
+							    <!-- room_id 机房ID -->
+							   <if test="room_id!=null and room_id!='' "> and MROOMID= #{room_id} </if>	
+							  
+							   <!-- rack_name 机柜名称 -->
+							   <if test="rack_name!=null and rack_name!='' "> and DEVICENAME like  '%'|| #{rack_name} ||'%' </if>	
+							  
+							    <!-- rack _id 机柜ID -->
+							   <if test="rack_id!=null and rack_id!='' "> and RACKID= #{rack_id} </if>	
+							  
+							   <if test="qr_code !=null and qr_code !='' "> and qr_code= #{qr_code} </if>	
+							  
+							   <!-- user_id 用户 -->
+							   <if test="user_id!=null and user_id!='' "> and MANATYPE in <include refid="RMSRack_userSql"/> </if>
+		  <![CDATA[  ) ir
+		  ]]>
+		  <!-- 引用 公共分页 -->
+	       <include refid="RMSRack_pageSql"/>
+	       
+	   <![CDATA[ ) kr
+		    on COM_RACK.RACKID = kr.RACKID0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+
+
+	<!-- 6.1.3.2	机柜内子框查询  -->
+	<select id="getAllSubShelfsSqlId"  parameterType="Map"  resultType="java.util.HashMap">
+	 	<![CDATA[ 
+	 		select rackboxid  shelf_id,
+			       np_PUBLIC_BUSI.GET_KEY_EXCH_SHOW('COM_RACK', 'DEVICECODE', DEVRACKID) || '[' ||
+			       (select min(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) || '-' ||
+			       (select MAX(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) || '单元]' shelf_code,
+			       np_PUBLIC_BUSI.GET_KEY_EXCH_SHOW('COM_RACK', 'DEVICENAME', DEVRACKID) || '[' ||
+			       (select min(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) || '-' ||
+			       (select MAX(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) || '单元]' shelf_name,
+			       np_PUBLIC_BUSI.GET_KEY_EXCH_SHOW('COM_RACK', 'SUPNAME', DEVRACKID) || '[' ||
+			       (select min(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) || '-' ||
+			       (select MAX(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) || '单元]' name_std,
+			       (select min(t.unitorder)
+			          from DEVUNITBOX a, COM_RACKUNIT t
+			         where a.unitid = t.rackunitid
+			           and a.rackboxid = COM_RACKBOX.RACKBOXID) shelf_serial,
+			       (select dbo.sr('VENDOR', k.vendorid)
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) vendor,
+			       (select dbo.sr('RACKTPL', k.racktplid)
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) shelf_type,
+			       (select dbo.sf('COM_RACK', 'MANATYPE', k.MANATYPE, null)
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) disp_dept,
+			       '' maintain_dept,
+			       (select k.WORKDATE
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) beg_time,
+			       (select k.RACKWIDTH
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) thick,
+			       (select k.RACKLENGTH
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) width,
+			       trunc((select k.RACKHEIGHT /
+			                     (select max(t.unitorder)
+			                        from com_rackunit t
+			                       where t.rackid = k.rackid)
+			                from com_rack k
+			               where k.rackid = COM_RACKBOX.Devrackid) *
+			             COM_RACKBOX.Unitnum) height,
+			       (select dbo.sr('COM_MROOM', k.mroomid)
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) belong_room,
+			       (select k.mroomid
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) room_id,
+			       '' x_coord,
+			       '' y_Coord,
+			       dbo.sr(COM_RACKBOX.Devresid, COM_RACKBOX.Devid) load_equip,
+			       '' belong_sys,
+			       (select dbo.sr('COM_STATION', k.sn)
+			          from com_rack k
+			         where k.rackid = COM_RACKBOX.Devrackid) belong_station,
+			       (select k.sn from com_rack k where k.rackid = COM_RACKBOX.Devrackid) station_id
+			  from COM_RACKBOX
+			
+			 inner join (select rackboxid COM_RACKBOX0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+			                            rackboxid
+			                       from COM_RACKBOX
+			                      WHERE 
+			                            (devresid in ('TR_SDH', 'TR_DDF', 'ODF') 
+			                            and np_PUBLIC_BUSI.GET_KEY_EXCH_SHOW('COM_RACK',
+			                                                               'DEVICENAME',
+			                                                               DEVRACKID) is not null) 
+			                ]]>
+			                            
+	                          <if test="rack_id !=null and rack_id !='' ">
+	                          	and Devrackid = #{rack_id}
+	                          </if>
+	                          
+	                          <if test="user_id !=null  and user_id !='' ">
+                          	          and (select 
+		                                        k.MANATYPe
+		                                from com_rack k
+		                               where k.rackid = COM_RACKBOX.Devrackid) in <include refid="RMSRack_userSql" /> 
+	                          </if> 
+			                            
+			      <![CDATA[ ) ir ]]>
+						
+					<include refid="RMSRack_pageSql"/>
+									                
+			    <![CDATA[   ) kr
+			    on COM_RACKBOX.rackboxid = kr.COM_RACKBOX0001
+			 order by kr.PAM_ROWNUM ]]>
+	</select>
+
+
+	<!--  6.1.3.3	机柜内配线模块查询-->
+	<select id="getAllWiringModulesInRacklIdSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select 
+		       module_id,
+		       module_mane,
+		       rack_id,
+		       rack_name,
+		       module_type,
+		       sn,
+		       total_row,
+		       total_col,
+		       vender,
+		       beg_date,
+		       service_state,
+		       maintain_dept,
+		       disp_dept,
+		       rack_used,
+		       purpose,
+		       remarks
+		  from v_peixian_dev
+		 inner join (select module_id module_id0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by module_type desc, module_mane asc) + 0 AS rownum_,
+		                            module_id
+		                       from v_peixian_dev
+		                      WHERE 1=1 
+		   ]]>
+		   						<!-- rack _id 机柜ID -->
+							   <if test="rack_id!=null and rack_id!='' "> and rack_id= #{rack_id} </if>	
+		                       <!-- rack_name -->
+		                       <if test="rack_name!=null and rack_name!='' "> and rack_name like  '%'|| #{rack_name} ||'%' </if>
+		                      	<!-- user_id 用户 -->
+							   <if test="user_id!=null and user_id!='' "> and MANATYPE in  <include refid="RMSRack_userSql"/> </if>
+								
+		       	<![CDATA[     ) ir  ]]>
+		             <!-- 引用 公共分页 -->
+	      			 <include refid="RMSRack_pageSql"/>
+		  	<![CDATA[ 
+		  	) kr
+		    on v_peixian_dev.module_id = kr.module_id0001
+		 order by kr.PAM_ROWNUM
+				  	
+		]]>
+	</select>
+
+	<!-- 6.1.3.4	子框内板卡查询 -->
+	<select id="getAllCardsSqlIdInRack"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+	 	select card_id,
+				       card_code,
+				       sn,
+				       card_name,
+				       name_std,
+				       card_type,
+				       model,
+				       version,
+				       status,
+				       rack_id,
+				       rack_name,
+				       slot_id,
+				       slot_name,
+				       equip_id,
+				       equip_name
+				  from v_board_OPandTR
+				 inner join (select card_id card_id0001, rownum_ PAM_ROWNUM
+				               from (select ROW_NUMBER() OVER(order by card_type desc, card_name asc) + 0 AS rownum_,
+                            card_id
+                       from v_board_OPandTR
+                      WHERE 
+                            1=1 
+                         ]]>   
+                          
+                          <if test="user_id!=null and user_id!='' "> and MANATYPE in  <include refid="RMSRack_userSql"/> </if>
+                         
+                         <if test="shelf_id !=null and shelf_id !='' ">
+                         	  and exists
+                             (select 1
+                                from COM_RACKBOX x
+                               where x.devid = v_board_OPandTR.equip_id
+                                 and x.devrackid = v_board_OPandTR.rack_id
+                                 and x.rackboxid = #{shelf_id}
+                               	
+                               	<if test="shelf_name !=null and shelf_name !='' ">
+                               		   and ((select min(t.unitorder)
+                                         from DEVUNITBOX a, COM_RACKUNIT t
+                                        where a.unitid = t.rackunitid
+                                          and a.rackboxid = x.RACKBOXID)|| '-' ||
+                                     (select MAX(t.unitorder)
+                                         from DEVUNITBOX a, COM_RACKUNIT t
+                                              where a.unitid = t.rackunitid
+                                              and a.rackboxid = x.RACKBOXID) || '单元]') like '%'|| #{shelf_name} ||'%'
+                               	</if>
+                               )
+                         </if>
+                                     
+               <![CDATA[ ) ir]]>
+		    
+		    <!-- 引用 公共分页 -->
+	      	<include refid="RMSRack_pageSql"/>
+		    
+		    <![CDATA[ ) kr
+		    on v_board_OPandTR.card_id = kr.card_id0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+	
+	<!--  机柜信息修改的方法 -->
+	<update id="changeRackInfoSqlId"  parameterType="Map" >
+	  update COM_RACK  
+	 	 <trim prefix="set" suffixOverrides=",">
+		  	<if test="disp_dept != null and disp_dept !='' ">MANATYPE =#{disp_dept},</if>
+		  	<if test="qr_code != null and qr_code !='' ">qr_code =#{qr_code},</if>
+		  	
+		 </trim> 
+		where  rackid = #{rack_id}
+	</update>
+
+ 
+
+</mapper>

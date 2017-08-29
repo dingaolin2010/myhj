@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+	
+	<!-- 公共 动态分页查询条件  -->
+	<sql id="RMEq_pageSql">
+		  <if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+	
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMEq_userSql">
+	   ( select  distinct
+		       hum.MANATYPE
+			  from HJFIX_USER hu 
+			  left join  HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+			   where  hu.userName =#{user_id}
+		      <if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>      
+		      )                                    
+	</sql>	
+	
+	
+	<!-- 6.1.5 通信设备 -->
+	<!-- 6.1.5.1 通信设备查询 -->
+	<select id="getAllEquipmentsSqlId" parameterType="Map"  resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  		select h.devid equip_id,
+		         h.devcode equip_code,
+		         h.devname equip_name,
+		         h.supname name_std,
+		         'SDH设备' equip_type,
+		         (select l.modelname
+		            from vendormodel l
+		           where l.vendormodelid = h.vendormodelid) model,
+		         (select l.vendorname from vendor l where l.vendorid = h.vendorid) vender,
+		         '' version,
+		         workdate beg_date,
+		         dbo.sf('TR_SDH', 'FACSTATUS', FACSTATUS, null) status,
+		          dbo.sf('TR_SDH', 'MAINTAIN', MAINTAIN, null) maintain_dept,
+		          h.mroomid room_id,
+		         (select m.mroomname from com_mroom m where m.mroomid = h.mroomid) room_name,
+		         h.mroomid romm_id,
+		         (select k.devicename from com_rack k where k.rackid = H.devrackid) rack_name,
+		         H.devrackid rack_id,
+		         dbo.sf('TR_SDH', 'MANATYPE', MANATYPE, null) disp_dept,
+		         to_char(MANATYPE) MANATYPE,
+		         null end_date,
+		         FACVERSION soft_version,
+		         '' purpose,
+		         '' gateway_net,
+		         (select n.stname from com_station n where n.sn = h.sn) station_name,
+		         h.sn station_id,
+		         h.remark remark,
+		         '' x,
+		         '' y,
+		         (select s.emsname from tr_ems s where s.emsid=h.emsid) sys_name,
+		         '' relation_id,
+		         'TR_SDH' RESID,
+		         qr_code
+		    from tr_sdh h   
+		   inner join (  select equip_id equip_id0001, rownum_ PAM_ROWNUM
+		               from ( 
+		                    select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            s.devid equip_id
+		                       from tr_sdh s
+		                      WHERE 1 = 1
+			]]>       
+			
+					<if test="equip_id != null and equip_id != '' "> and s.devid = #{equip_id} </if>
+					<if test="rack_id != null and rack_id != '' "> and s.devrackid = #{rack_id} </if>
+					<if test="room_id != null and room_id != '' "> and s.mroomid = #{room_id} </if>
+					<if test="station_id != null and station_id != '' "> and s.sn = #{station_id} </if>
+					
+					
+					<if test="station_name != null and station_name != '' "> and (select n.stname from com_station n where n.sn = s.sn) like  '%'|| #{station_name} ||'%' </if>
+					<if test="room_name != null and room_name != '' ">       and (select m.mroomname from com_mroom m where m.mroomid = s.mroomid) like  '%'|| #{room_name} ||'%' </if>
+					<if test="rack_name != null and rack_name != '' ">      and  (select k.devicename from com_rack k where k.rackid = s.devrackid) 	like  '%'|| #{rack_name} ||'%'</if>
+					<if test="equip_name != null and equip_name != '' "> and s.devname like  '%'|| #{equip_name} ||'%' </if>
+					<if test="sys_name != null and sys_name != '' "> and (select n.stname from com_station n where n.sn = s.sn) like  '%'|| #{sys_name} ||'%' </if>
+					
+					<if test="qr_code != null and qr_code != '' "> and qr_code = #{qr_code} </if>
+					
+					<if test="user_id != null and user_id != '' "> and MANATYPE in <include refid="RMEq_userSql" /> </if>
+			
+			               
+			<![CDATA[ 	) ir ]]>
+			
+		   <!-- 引用 公共分页 -->
+	       <include refid="RMEq_pageSql"/>
+	       
+			<![CDATA[ 	     
+		       ) kr
+	    on h.devid = kr.equip_id0001
+	 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+
+
+
+	<!-- 6.1.5.2 设备承载的业务列表查询 -->
+	<select id="getAllEquipBussinessSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		 	select (select max(p.busigroupid)
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') bus_id,
+		       (select max(p.businame)
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') bus_name,
+		       (select max(dbo.sf('CIRCUITBUSIGROUP', 'BUSITYPE', p.BUSITYPE, null))
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') bus_type,
+		       tr_circuit.a_sn station_a_id,
+		       tr_circuit.z_sn station_z_id,
+		       tr_circuit.a_devrxportid port_a_id,
+		       tr_circuit.z_devrxportid port_z_id,
+		       tr_circuit.a_devid equip_a_id,
+		       tr_circuit.z_devid equip_z_id,
+		       (select n.stname from com_station n where n.sn = tr_circuit.a_sn) station_a_name,
+		       (select n.stname from com_station n where n.sn = tr_circuit.z_sn) station_z_name,
+		       (select o.portcode
+		          from tr_devport o
+		         where o.portid = tr_circuit.a_devrxportid) port_a_name,
+		       (select o.portcode
+		          from tr_devport o
+		         where o.portid = tr_circuit.z_devrxportid) port_z_name,
+		       dbo.sr(tr_circuit.a_devtype, tr_circuit.a_devid) equip_a_name,
+		       dbo.sr(tr_circuit.z_devtype, tr_circuit.z_devid) equip_z_name,
+		       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.a_tsid) a_slot,
+		       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.z_tsid) z_slot,
+		       null beg_date,
+		       (select max(dbo.sf('CIRCUITBUSIGROUP', 'USEUNIT', p.USEUNIT, null))
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') use_dept,
+		       '' status,
+		       '' fiber_id
+		  from tr_circuit
+		 inner join (select circuitid circuitid0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            circuitid
+		                       from tr_circuit  WHERE  1=1
+		                       ]]>
+		                       
+		                       <if test="equip_id !=null and equip_id !='' ">  
+		                        and (a_devid = #{equip_id} or z_devid = #{equip_id} ) 
+		                       </if>
+		                       
+		                       <if test="equip_name != null and equip_name != '' ">  
+		                         and (dbo.sr(tr_circuit.a_devtype, tr_circuit.a_devid) like '%'|| #{equip_name} ||'%'   
+		                         or  dbo.sr(tr_circuit.z_devtype, tr_circuit.z_devid)  like '%'|| #{equip_name} ||'%' 
+		                         )
+		                       </if>
+		                       
+                               <if test="user_id !=null and user_id != '' ">
+		                          and   (select 
+		                                	max(p.useunit)
+		                            		from circuitbusilink b, circuitbusigroup p
+		                                where  b.lineid = tr_circuit.circuitid
+		                                 and b.busigroupid = p.busigroupid
+		                                 and b.lineresid = 'TR_CIRCUIT')  in <include refid="RMEq_userSql" />  
+		                  		 </if>
+		                     
+		                      <![CDATA[    
+                                 and   (exists  (select 1
+                                       				from circuitbusilink b, circuitbusigroup p
+				                                      where b.lineid = tr_circuit.circuitid
+				                                        and b.busigroupid = p.busigroupid
+				                                        and b.lineresid = 'TR_CIRCUIT'))
+                                        
+                                  ) ir
+		                	]]>
+		   <!-- 引用 公共分页 -->
+	       <include refid="RMEq_pageSql"/> 
+
+		<![CDATA[ ) kr
+		    on tr_circuit.circuitid = kr.circuitid0001
+		 order by kr.PAM_ROWNUM
+
+		]]>
+	</select>
+	
+
+
+	<!-- 6.1.5.3 设备上板卡查询 接口方法同 6.1.3.4（String getAllCards (String parameter) -->
+	<select id="getAllCardsSqlIdInEq" parameterType="Map" resultType="java.util.HashMap">
+	 	 <![CDATA[ 
+		 select card_id,
+		      	 card_code,
+			       sn,
+			       card_name,
+			       name_std,
+			       card_type,
+			       model,
+			       version,
+			       status,
+			       rack_id,
+			       rack_name,
+			       slot_id,
+			       slot_name,
+			       equip_id,
+			       equip_name
+			  from v_board_OPandTR
+			 inner join (select card_id card_id0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by card_type desc, card_name asc) + 0 AS rownum_,
+	                            card_id
+	                       from v_board_OPandTR
+		                      WHERE  1=1 
+		                 ]]>
+		                 	
+		                 	<if test="equip_id!=null and equip_id!=''" > and equip_id=#{equip_id}   </if>
+		                    <if test="equip_name!=null and equip_name!=''" > and equip_name like '%'||  #{equip_name} ||'%'  </if>
+		                    <if test="user_id!=null and user_id!=''" > and MANATYPE  in <include refid="RMEq_userSql" />     </if>
+
+		            <![CDATA[      ) ir   ]]>
+		            <!-- 引用 公共分页 -->
+	      			 <include refid="RMEq_pageSql"/>
+		    <![CDATA[    ) kr
+			    on v_board_OPandTR.card_id = kr.card_id0001
+			 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+
+	<!-- 6.1.5.6 设备信息修改 -->
+	<update id="changeEquipInfoSqlId" parameterType="Map" >
+		update tr_sdh   
+   			  <trim prefix="set" suffixOverrides=",">
+			  	<if test="maintain_dept != null and maintain_dept !='' ">MAINUNIT = #{maintain_dept},</if>
+			  	<if test="disp_dept !=null and disp_dept !='' ">MANATYPE = #{disp_dept},</if>
+			  	<if test="end_date  !=null and end_date  !='' ">RESTDATE =to_date(#{end_date}, 'yyyy-MM-dd '),</if>
+			  	<if test="soft_version !=null and soft_version !='' ">SOFTVER = #{soft_version},</if>
+			  	<if test="purpose != null and purpose != '' ">purpose = #{purpose},</if>
+			  	<if test="qr_code != null and qr_code != '' ">qr_code = #{qr_code},</if>
+			  	
+			 </trim>
+		 where DEVID = #{equip_id}
+	</update>
+
+
+
+
+	<!-- 6.1.5.7 逻辑端口查询 -->
+	<select id="getAllLogicPortsSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select tr_devport.portid port_id,
+		       tr_devport.portcode port_name,
+		       tr_devport.supcode name_std,
+		       tr_devport.orderinboard port_serial,
+		       dbo.sf('TR_DEVPORT', 'SIGNALTYPE', SIGNALTYPE, null) port_type,
+		       dbo.sf('TR_DEVPORT', 'RXTX', RXTX, null) direction,
+		       '' purpose,
+		       dbo.sf('TR_DEVPORT', 'PORTRATE', PORTRATE, null) rate,
+		       dbo.sf('TR_DEVPORT', 'BUSISTATUS', BUSISTATUS, null) status,
+		       dbo.sr(tr_devport.devresid, tr_devport.devinsid) equip_name,
+		       tr_devport.devinsid equip_id,
+		       tr_devport.boardid card_id,
+		       dbo.sr('TR_DEVBOARD', tr_devport.boardid) card_name,
+		       (select t.bportid
+		          from tr_portlink t
+		         where t.aportid = tr_devport.portid
+		        union
+		        select t.aportid
+		          from tr_portlink t
+		         where t.bportid = tr_devport.portid) dd_port_id,
+		       (select dbo.sr('TR_DEVPORT', t.bportid)
+		          from tr_portlink t
+		         where t.aportid = tr_devport.portid
+		        union
+		        select dbo.sr('TR_DEVPORT', t.aportid)
+		          from tr_portlink t
+		         where t.bportid = tr_devport.portid) dd_port_name,
+		       (select p.supname
+		          from tr_portlink t, tr_devport p
+		         where t.aportid = tr_devport.portid
+		           and t.bportid = p.portid
+		        union
+		        select p.supname
+		          from tr_portlink t, tr_devport p
+		         where t.bportid = tr_devport.portid
+		           and t.aportid = p.portid) dd_name_std,
+		       (select p.orderinboard
+		          from tr_portlink t, tr_devport p
+		         where t.aportid = tr_devport.portid
+		           and t.bportid = p.portid
+		        union
+		        select p.orderinboard
+		          from tr_portlink t, tr_devport p
+		         where t.bportid = tr_devport.portid
+		           and t.aportid = p.portid) dd_port_serial
+		  from tr_devport
+		 inner join (select portid portid0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            portid
+		                       from tr_devport
+		                      WHERE tr_devport.devresid = 'TR_SDH'
+		            ]]>
+		            	<if test="equip_id != null and equip_id != '' "> and  devinsid=#{equip_id} </if>
+		            	<if test="card_id != null and card_id != '' "> and boardid =#{card_id}   </if>
+		            	
+		            	<if test="user_id != null and user_id != '' ">  
+		            		and  (select to_char(sdh.manatype) from tr_sdh sdh  where sdh.devid = tr_devport.devinsid) in  <include refid="RMEq_userSql" /> 
+		                </if>
+		                          
+		               <![CDATA[    ) ir  ]]>      
+		                    
+			            <include refid="RMEq_pageSql"/>
+
+			<![CDATA[    ) kr
+			    on tr_devport.portid = kr.portid0001
+			 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+
+
+	<!-- //TODO 此方法与 6.1.5.8 逻辑端口信息修改 一直 //设备信息修改的方法（changeEquipInfo）定义如下： -->
+	<select id="" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  
+		]]>
+	</select>
+
+
+</mapper>

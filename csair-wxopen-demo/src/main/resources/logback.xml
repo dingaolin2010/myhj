@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration scan="true">
+
+	<!-- 文件输出格式 -->
+	<property name="PATTERN" value="%-12(%d{yyyy-MM-dd HH:mm:ss.SSS}) |-%-5level [%thread] %c [%L] -| %msg%n" />
+
+	<!-- test文件路径 -->
+	<property name="TEST_FILE_PATH" value="D:/logs/server" />
+
+	<!-- 开发环境 -->
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>${PATTERN}</pattern>
+		</encoder>
+	</appender>
+
+	<logger name="com.roncoo.education" level="info" />
+
+	<!-- 测试环境 -->
+	<!-- 每天产生一个文件 -->
+	<appender name="TEST-FILE"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<!-- 文件路径 -->
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- 文件名称 -->
+			<FileNamePattern>${TEST_FILE_PATH}/server.%d{yyyy-MM-dd}.log</FileNamePattern> 
+			<!-- 文件最大保存历史数量 -->
+			<MaxHistory>100</MaxHistory>
+		</rollingPolicy>
+		 <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"> 
+		 	<charset>utf-8</charset>
+		 	<!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符--> 
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>   
+		 </encoder>
+		 
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>${PATTERN}</pattern>
+		</layout>
+		
+		 <!--日志文件最大的大小-->
+       <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+         <MaxFileSize>10MB</MaxFileSize>
+       </triggeringPolicy>
+       
+	</appender>
+
+	<root level="info">
+		<appender-ref ref="TEST-FILE" />
+		<appender-ref ref="CONSOLE" />
+	</root>
+
+</configuration>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserInfo">
+	
+	<!-- 获取用户列表和用户详情的方法（getAllUserInfos） -->
+    <select id="getAllUserInfosSqlId" parameterType="Map" resultType="java.util.HashMap">
+     		<![CDATA[
+				select 
+				   USERID user_id, 
+				   USERNAME user_name,
+				   MOBILE mobile,
+				   MOBILE phone,
+				   MAIL emali,
+				   ' ' sex,
+				   ' ' islocked, 
+				   ' ' export_level ,
+				   dbo.sf('HJFIX_USER','USERTYPE',USERTYPE,null) duty,
+				   rownum sort,
+				    (select t.unitname  from hjfix_unit t where t.unitid=hjfix_user.unitid) dept_name,  
+				   ' 'dept_desc,  
+				   ( case when USERTYPE in ('0','1') then '是' else '否' end) is_leader,
+				   ' ' is_major_dept,
+				   ' ' sys
+				from  hjfix_user
+     		]]>
+    </select>
+    
+	<!-- 用户信息校验的方法（checkoutUser）-->
+	<select id="checkoutUserSqlId" resultType="java.util.HashMap" parameterType="Map">
+		<![CDATA[ 
+			 select username, workno from hjfix_user where username = #{user_id} and LOGINWORD = #{user_pwd}
+			]]>
+	</select>
+	
+</mapper>

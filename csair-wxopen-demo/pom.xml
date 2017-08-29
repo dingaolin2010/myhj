@@ -1,0 +1,405 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.csair.wx.wxopen</groupId>
+	<artifactId>csair-demo</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>csair-wxopen</name>
+	<url>http://maven.apache.org</url>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.4.1.RELEASE</version>
+	</parent>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<guava.version>18.0</guava.version>
+		<commons-lang3.version>3.4</commons-lang3.version>
+		<commons-codec.version>1.10</commons-codec.version>
+		<commons-io.version>2.4</commons-io.version>
+		<commons-beanutils.version>1.9.2</commons-beanutils.version>
+		<orika.version>1.4.6</orika.version>
+		<axis.version>1.4</axis.version>
+		<xstream.version>1.4.4</xstream.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+			<version>1.4.2.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
+		</dependency>
+		<!-- 
+			<dependency> 
+				<groupId>org.springframework.boot</groupId> 
+				<artifactId>spring-boot-starter-redis</artifactId> 
+			</dependency>
+		 -->
+		<!-- https://mvnrepository.com/artifact/net.sf.json-lib/json-lib -->
+		<!-- 
+			<dependency> 
+				<groupId>net.sf.json-lib</groupId> 
+				<artifactId>json-lib</artifactId> 
+				<version>2.3-jdk15</version> 
+			</dependency> 
+		-->
+
+		<dependency>
+			<groupId>json-lib</groupId>
+			<artifactId>json-lib</artifactId>
+			<version>2.3-jdk15</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-freemarker</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+		</dependency>
+		<!-- UTILS begin -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>${guava.version}</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${commons-lang3.version}</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>commons-beanutils</groupId>
+			<artifactId>commons-beanutils</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>ma.glasnost.orika</groupId>
+			<artifactId>orika-core</artifactId>
+			<version>${orika.version}</version>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- HTTP -->
+		<dependency>
+			<groupId>commons-httpclient</groupId>
+			<artifactId>commons-httpclient</artifactId>
+			<version>3.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk16</artifactId>
+			<version>1.46</version>
+		</dependency>
+		<!-- UTILS end -->
+
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>1.1.15</version>
+		</dependency>
+		<!-- <dependency> <groupId>csmbp_jar</groupId> <artifactId>client-webcki-ckiejb</artifactId> 
+			<version>1.0</version> </dependency> -->
+		<!-- <dependency> <groupId>com.oracle.weblogic</groupId> <artifactId>wlthint3client</artifactId> 
+			<version>20150313</version> </dependency> -->
+
+		<dependency>
+			<groupId>org.apache.axis</groupId>
+			<artifactId>axis</artifactId>
+			<version>${axis.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.axis</groupId>
+			<artifactId>axis-jaxrpc</artifactId>
+			<version>${axis.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.axis</groupId>
+			<artifactId>axis-saaj</artifactId>
+			<version>${axis.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>wsdl4j</groupId>
+			<artifactId>wsdl4j</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>commons-discovery</groupId>
+			<artifactId>commons-discovery</artifactId>
+			<version>0.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.thoughtworks.xstream</groupId>
+			<artifactId>xstream</artifactId>
+			<version>${xstream.version}</version>
+		</dependency>
+		<!-- <dependency> <groupId>javaee</groupId> <artifactId>javaee-api</artifactId> 
+			<version>5</version> </dependency> -->
+		<!-- et -->
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-activation_1.1_spec</artifactId>
+			<version>1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.geronimo.specs</groupId>
+			<artifactId>geronimo-javamail_1.4_spec</artifactId>
+			<version>1.7.1</version>
+		</dependency>
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>4.7</version>
+		</dependency>
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.1.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.1.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
+			<version>2.2.1</version>
+		</dependency>
+
+		<!-- <dependency> <groupId>com.zaxxer</groupId> <artifactId>HikariCP</artifactId> 
+			<version>2.5.1</version> </dependency> -->
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>druid</artifactId>
+			<version>1.0.24</version>
+		</dependency>
+
+
+		<!--二维码图片生成 -->
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>javase</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>javax.el</groupId>
+			<artifactId>javax.el-api</artifactId>
+			<version>2.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.web</groupId>
+			<artifactId>javax.el</artifactId>
+			<version>2.2.4</version>
+		</dependency>
+
+    <!--配置servlet-->  
+        <dependency>  
+            <groupId>javax.servlet</groupId>  
+            <artifactId>javax.servlet-api</artifactId>  
+        </dependency>  
+  
+        <!--配置jsp jstl的支持-->  
+        <dependency>  
+            <groupId>javax.servlet</groupId>  
+            <artifactId>jstl</artifactId>  
+        </dependency>  
+  
+        <!--添加对tomcat的支持-->  
+        <dependency>  
+           <groupId>org.springframework.boot</groupId>  
+           <artifactId>spring-boot-starter-tomcat</artifactId>  
+            <scope>provided</scope>  
+        </dependency>  
+  
+        <!--对jsp的支持-->  
+        <dependency>  
+            <groupId>org.apache.tomcat.embed</groupId>  
+            <artifactId>tomcat-embed-jasper</artifactId>  
+        </dependency>  
+
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- 打成一个zip包需要的配置 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<!-- <descriptor>bin/assembly/assembly-${env}.xml</descriptor> -->
+					<descriptor>bin/assembly/${mvn.assemble.conf.file}</descriptor>
+					<finalName>csair-wxopen</finalName>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.7</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+					<!-- <compilerId>eclipse</compilerId> -->
+					<!-- 设置编译的字符集编码和环境编码 -->
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<!-- sonar配置,检查代码质量 -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>2.5</version>
+			</plugin>
+		</plugins>
+	</build>
+
+
+	<!-- 此配置为打包上传到私服 -->
+	<!-- id要跟maven下的settings.xml的server名字一定要对应上 -->
+<!-- 	<distributionManagement> -->
+		<!-- 每次将要部署生产环境的profile,Jenkins build项目上传到nexus releases-->
+		<!-- 在Jenkins对应的maven setting里面配置有id为releases的账号信息 -->
+		<!-- <repository>
+            <id>releases</id>
+			<name>Nexus Release Repository</name>
+			<url>http://10.92.7.18:8081/repository/maven-releases</url>
+            <url>http://10.92.7.15:8081/nexus/content/repositories/releases/</url>
+		</repository> -->
+        <!-- 上传到测试环境测试的profile,本地或测试环境build项目上传到nexus snapshots-->
+		<!-- <snapshotRepository>
+			<id>nexus</id>
+			<name>Nexus Snapshot Repository</name> -->
+			<!-- <url>http://10.92.7.18:8081/repository/maven-snapshots</url> -->
+	<!-- 		<url>http://10.92.7.15:8081/nexus/content/repositories/snapshots/</url>
+		</snapshotRepository>
+	</distributionManagement>
+	 -->
+	
+	<profiles>
+		<profile>
+			<id>sit</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<properties>
+				<mvn.assemble.conf.file>assembly-sit.xml</mvn.assemble.conf.file>
+			</properties>
+		</profile>
+		<profile>
+			<id>prod</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<properties>
+				<mvn.assemble.conf.file>assembly-prod.xml</mvn.assemble.conf.file>
+			</properties>
+		</profile>
+		<profile>
+			<id>pre</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<properties>
+				<mvn.assemble.conf.file>assembly-pre.xml</mvn.assemble.conf.file>
+			</properties>
+		</profile>
+		<profile>
+			<id>local</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+			<properties>
+				<mvn.assemble.conf.file>assembly-sit.xml</mvn.assemble.conf.file>
+			</properties>
+		</profile>
+
+
+<!-- 		<profile>
+			<id>sonar</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties> -->
+				<!-- Example for postgres -->
+				<!-- <sonar.jdbc.url>jdbc:mysql://10.92.2.55:3306/sonar?useUnicode=true&amp;characterEncoding=utf8</sonar.jdbc.url>
+				<sonar.jdbc.username>sonar</sonar.jdbc.username>
+				<sonar.jdbc.password>sonar</sonar.jdbc.password> -->
+				<!-- Optional URL to server. Default value is http://localhost:9000 -->
+			<!-- 	<sonar.host.url>http://10.92.7.18:9000/</sonar.host.url>
+			</properties>
+		</profile> -->
+	</profiles>
+
+</project>

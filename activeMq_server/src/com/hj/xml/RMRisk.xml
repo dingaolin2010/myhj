@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 6.1.9 风险管理 -->
+	<parameterMap type="java.util.Map" id="getUserCountMap">
+		<parameter property="sessionid" mode="IN" jdbcType="VARCHAR" />
+		<parameter property="result" mode="OUT" jdbcType="VARCHAR" />
+	</parameterMap>
+
+	<!-- 把资源实例插入表 Base_Select_List ，带sessionid，定义好sessionid值，变量p_sessionid插入表 -->
+	<insert id="insert_base_list" parameterType="java.util.ArrayList">
+
+		insert into Base_Select_List (Recid, Sessionid, Resid, Insid)
+
+		<foreach collection="list" item="ite" index="index" separator=" union all ">
+			select sys_guid(), #{ite.SESSIONID}, #{ite.RESOURCEID}, #{ite.INSID}
+			from dual
+		</foreach>
+
+	</insert>
+
+	<select id="RMRiskPro" parameterMap="getUserCountMap"
+		statementType="CALLABLE">
+		call busi_analysis.n_m_Analyze(?,?)
+	</select>
+
+	<!-- 6.1.9.1 N-1分析查询 -->
+	<select id="getAnalysisN_1SqlId" parameterType="Map"
+		resultType="java.util.HashMap">
+	 	<![CDATA[ 
+			 select DISTINCT
+			  c.circuitid circuit_id,
+			       c.circuitcode circuit_code,
+			       c.circuitname circuit_name,
+			       dbo.sf('tr_circuit','rate',c.rate,null) rate,
+			       dbo.sf('tr_circuit','class',c.class,null) net_type,
+			       dbo.sf('tr_circuit','class',c.class,null) disp_type,
+			       c.dispatchid oper_id,
+			       c.customerid user_name,
+			       c.finishdate beg_date,
+			       dbo.sf('tr_circuit','worktype',c.worktype,null) status,
+			       c.a_sn station_a_id,
+			       c.z_sn station_z_id,
+			       dbo.sf('tr_circuit','a_sn',c.a_sn,null) station_a_name,
+			       dbo.sf('tr_circuit','z_sn',c.z_sn,null) station_z_name,
+			       c.a_devrxportid port_a_id,
+			       c.z_devrxportid port_z_id,
+			       dbo.sf('tr_circuit','a_devrxportid',c.a_devrxportid,null) port_a_name,
+			       dbo.sf('tr_circuit','z_devrxportid',c.z_devrxportid,null) port_z_name,
+			       c.a_tsid slot_a,
+			       c.z_tsid slot_z,
+			       decode(r.appstatus,0,'影响',1,'中断') influence,
+			       dbo.sf('tr_circuit','busitype',c.busitype,null) bus_type
+			  from base_select_result r, tr_circuit c
+			 where r.sessionid = #{sessionid}
+			   and r.resid = 'TR_CIRCUIT'
+			   and r.insid = c.circuitid
+		]]>
+	</select>
+
+
+	<!-- 6.1.9.2 N-X分析查询 -->
+	<select id="getAnalysisN_XSqlId" parameterType="Map"
+		resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select	DISTINCT 
+		  c.circuitid circuit_id,
+			       c.circuitcode circuit_code,
+			       c.circuitname circuit_name,
+			       dbo.sf('tr_circuit','rate',c.rate,null) rate,
+			       dbo.sf('tr_circuit','class',c.class,null) net_type,
+			       dbo.sf('tr_circuit','class',c.class,null) disp_type,
+			       c.dispatchid oper_id,
+			       c.customerid user_name,
+			       c.finishdate beg_date,
+			       dbo.sf('tr_circuit','worktype',c.worktype,null) status,
+			       c.a_sn station_a_id,
+			       c.z_sn station_z_id,
+			       dbo.sf('tr_circuit','a_sn',c.a_sn,null) station_a_name,
+			       dbo.sf('tr_circuit','z_sn',c.z_sn,null) station_z_name,
+			       c.a_devrxportid port_a_id,
+			       c.z_devrxportid port_z_id,
+			       dbo.sf('tr_circuit','a_devrxportid',c.a_devrxportid,null) port_a_name,
+			       dbo.sf('tr_circuit','z_devrxportid',c.z_devrxportid,null) port_z_name,
+			       c.a_tsid slot_a,
+			       c.z_tsid slot_z,
+			       decode(r.appstatus,0,'影响',1,'中断') influence,
+			       dbo.sf('tr_circuit','busitype',c.busitype,null) bus_type
+			  from base_select_result r, tr_circuit c
+			 where r.sessionid = #{sessionid}
+			   and r.resid = 'TR_CIRCUIT'
+			   and r.insid = c.circuitid
+		]]>
+	</select>
+
+	<select id="getAnalysisRowsSqlId" parameterType="Map"
+		resultType="java.util.HashMap">
+	<![CDATA[ 	
+		select ( 
+	       select  count(1) 
+	         from (select r.insid from base_select_result r 
+	              where r.sessionid = #{sessionid}
+	              and r.resid = 'TR_CIRCUIT' group by r.insid)   ) total,
+	       (
+	         select  count(1) 
+	                 from (select s.insid from base_select_result s
+	              where s.sessionid = #{sessionid}
+	               and s.appstatus = 1
+	              and s.resid = 'TR_CIRCUIT' 
+	              group by s.insid) 
+	           ) BREAKTOTAL
+	  from dual
+	]]>
+	</select>
+</mapper>

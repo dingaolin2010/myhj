@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!--  6.1.6	业务电路   --> 
+	
+	<!-- 返回图片信息 -->
+	<resultMap type="com.hj.entity.Image" id="circultsImageId"  >
+		<result property="fileid"     column="fileid" 	javaType="String" jdbcType="VARCHAR" />
+		<result property="docname"      column="docname" 	javaType="String" jdbcType="VARCHAR" />
+	    <result property="blobsize" 	column="blobsize"   javaType="long" jdbcType="VARCHAR" />  
+	    <result property="photo"  		column="photo"   	javaType="byte[]" jdbcType="BLOB"  typeHandler="org.apache.ibatis.type.BlobTypeHandler"  />  
+	</resultMap>
+	
+	
+	<!-- 公共 动态分页查询条件  -->
+	<sql id="RMCircults_pageSql">
+		  <if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+	
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMCircults_userSql">
+	   ( select  distinct
+		       hum.MANATYPE
+			  from HJFIX_USER hu 
+			  left join  HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+			   where  hu.userName =#{user_id}
+		      <if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>      
+		      )                                    
+	</sql>	
+	
+	<!--   6.1.6.1	业务、电路查询  -->
+	<select id="getAllCircultsSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		   select circuitid circuit_id,
+		       circuitcode circuit_code,
+		       circuitname circuit_name,
+		       dbo.sf('TR_CIRCUIT', 'RATE', RATE, null) rate,
+		       dbo.sf('TR_CIRCUIT','BUSITYPE',BUSITYPE,null)   net_type,
+		       (select max(dbo.sf('CIRCUITBUSIGROUP', 'USEUNIT', p.USEUNIT, null))
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') disp_type,
+		       (select dbo.sr('KAITONG_APPLYBILL', l.orderid)
+		          from KAITONG_DESIGNBILL l
+		         where l.ITEMTYPE = 'TR_CIRCUIT'
+		           and l.REMOTEID = tr_circuit.circuitid) oper_id,
+		       CUSTOMERID user_name,
+		       FINISHDATE beg_date,
+		       dbo.sf('TR_CIRCUIT', 'BUSISTATUS', BUSISTATUS, null) status,
+		       tr_circuit.a_sn station_a_id,
+		       tr_circuit.z_sn station_z_id,
+		       (select n.stname from com_station n where n.sn = tr_circuit.a_sn) station_a_name,
+		       (select n.stname from com_station n where n.sn = tr_circuit.z_sn) station_z_name,
+		       tr_circuit.a_devrxportid port_a_id,
+		       tr_circuit.z_devrxportid port_z_id,
+		       (select o.portcode
+		          from tr_devport o
+		         where o.portid = tr_circuit.a_devrxportid) port_a_name,
+		       (select o.portcode
+		          from tr_devport o
+		         where o.portid = tr_circuit.z_devrxportid) port_z_name,
+		       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.a_tsid) slot_a,
+		       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.z_tsid) slot_z
+		  from tr_circuit
+		 inner join (select circuitid circuitid0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            circuitid
+		                       from tr_circuit
+		                      WHERE  1=1 
+			                          
+			                   ]]>  
+			                        
+		                       <if test="circuit_id !=null and circuit_id!='' "> 
+		                       		and  circuitid = #{circuit_id}
+		                       </if>
+		                       <if test="circuit_name !=null and circuit_name != '' "> 
+		                       		and circuitname like '%' || #{circuit_name} || '%' 
+		                       </if>
+		                       
+		                       
+		                       <if test="oper_id !=null and oper_id != '' "> 
+		                       		  and (select dbo.sr('KAITONG_APPLYBILL', l.orderid)
+	                                  from KAITONG_DESIGNBILL l
+                                       where l.ITEMTYPE = 'TR_CIRCUIT'
+	                                     and l.REMOTEID = tr_circuit.circuitid ) like  '%' ||#{oper_id} ||'%' 
+		                       </if>
+		                       
+		                        <if test="user_id !=null and user_id != '' "> 
+		                       	and (select to_char(max(p.USEUNIT))
+	                                from circuitbusilink b, circuitbusigroup p
+	                               where b.lineid = tr_circuit.circuitid
+	                                 and b.busigroupid = p.busigroupid
+	                                 and b.lineresid = 'TR_CIRCUIT')  in <include refid="RMCircults_userSql"/>
+		                       </if>
+		                        
+	                      
+			                                     
+			 <![CDATA[   ) ir ]]>
+
+		    <include refid="RMCircults_pageSql" />    
+		            
+		<![CDATA[ ) kr
+			    on tr_circuit.circuitid = kr.circuitid0001
+			 order by kr.PAM_ROWNUM
+			]]>
+	</select>
+
+
+	<!--   6.1.6.2	电路路由图查询      -->
+	<select id="getCircuitRoutesSqlId" parameterType="Map" resultMap="circultsImageId">
+	 	<![CDATA[ 
+		  	select 
+			  d.resinsid fileid,
+			  d.docname, 
+			  c.filebody photo,
+			  c.blobsize
+			from hjfix_resdoc d, hndldoc.sys_attachcontext c
+			 where d.docid = c.pointid
+			   and d.resid = 'TR_CIRCUIT_TOPO'
+			   and d.resinsid = #{circuit_id} 
+			   and  rownum = 1 
+		]]>
+	</select>
+
+	<!-- 6.1.6.3	业务方式单查询   -->
+	<select id="getAllCircuitOperationResSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		   select orderid iBillId,
+			       no sFlowCode,
+			       '' iWorkItemId,
+			       no sCode,
+			       name sTitle,
+			       dbo.sf('KAITONG_APPLYBILL', 'STATE', STATE, null) sStatusName,
+			       applydate dSCreateTime,
+			       (select merger(k.lineid)
+			          from CIRCUITBUSILINK k, KAITONG_DISPATCH h
+			         where h.orderid = KAITONG_APPLYBILL.ORDERID
+			           and h.businessid = k.busigroupid
+			           and k.lineresid = 'KAITONG_APPLYBILL') sorderid,
+			       (select merger(dbo.sr(k.lineresid, k.lineid))
+			          from CIRCUITBUSILINK k, KAITONG_DISPATCH h
+			         where h.orderid = KAITONG_APPLYBILL.ORDERID
+			           and h.businessid = k.busigroupid
+			           and k.lineresid = 'KAITONG_APPLYBILL') sCircuitName
+			  from KAITONG_APPLYBILL
+			 inner join (select orderid orderid0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+			                            orderid
+			                       from KAITONG_APPLYBILL
+			                      WHERE 
+			                      1=1 
+			             ]]>   
+			             	<if test="circuit_id !=null and circuit_id !=''">
+						        and exists
+	                             (select 1
+	                                from KAITONG_DESIGNBILL l
+	                               where l.ITEMTYPE = 'TR_CIRCUIT'
+	                                 and l.REMOTEID = #{circuit_id}
+	                                 and l.orderid = KAITONG_APPLYBILL.ORDERID)			             	
+			             	</if>
+			                                 
+			    <![CDATA[  ) ir  ]]>          
+		             
+		             <include refid="RMCircults_pageSql" />    
+		                
+		            <![CDATA[    ) kr
+			    on KAITONG_APPLYBILL.orderid = kr.orderid0001
+			 order by kr.PAM_ROWNUM
+				  
+		]]>
+	</select>
+
+	<!-- 6.1.6.4	业务关联其他业务列表查询 -->
+	<select id="getAllCircuitBussinessResSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select (select max(p.busigroupid)
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') bus_id,
+		       (select max(p.businame)
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') bus_name,
+		       (select max(dbo.sf('CIRCUITBUSIGROUP', 'BUSITYPE', p.BUSITYPE, null))
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') bus_type,
+		       tr_circuit.a_sn station_a_id,
+		       tr_circuit.z_sn station_z_id,
+		       tr_circuit.a_devrxportid port_a_id,
+		       tr_circuit.z_devrxportid port_z_id,
+		       tr_circuit.a_devid equip_a_id,
+		       tr_circuit.z_devid equip_z_id,
+		       (select n.stname from com_station n where n.sn = tr_circuit.a_sn) station_a_name,
+		       (select n.stname from com_station n where n.sn = tr_circuit.z_sn) station_z_name,
+		       (select o.portcode
+		          from tr_devport o
+		         where o.portid = tr_circuit.a_devrxportid) port_a_name,
+		       (select o.portcode
+		          from tr_devport o
+		         where o.portid = tr_circuit.z_devrxportid) port_z_name,
+		       dbo.sr(tr_circuit.a_devtype, tr_circuit.a_devid) equip_a_name,
+		       dbo.sr(tr_circuit.z_devtype, tr_circuit.z_devid) equip_z_name,
+		       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.a_tsid) a_slot,
+		       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.z_tsid) z_slot,
+		       null beg_date,
+		       (select max(dbo.sf('CIRCUITBUSIGROUP', 'USEUNIT', p.USEUNIT, null))
+		          from circuitbusilink b, circuitbusigroup p
+		         where b.lineid = tr_circuit.circuitid
+		           and b.busigroupid = p.busigroupid
+		           and b.lineresid = 'TR_CIRCUIT') use_dept,
+		       '' status,
+		       '' fiber_id
+		  from tr_circuit
+		 inner join (select circuitid circuitid0001, rownum_ PAM_ROWNUM
+               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+                            circuitid
+                       from tr_circuit
+                      WHERE  1=1
+                                                           
+                         and  (exists
+                               (select 1
+                                   from circuitbusilink b, circuitbusigroup p
+                                  where b.lineid = tr_circuit.circuitid
+                                    and b.busigroupid = p.busigroupid
+                                    and b.lineresid = 'TR_CIRCUIT'
+                                 )
+                              )
+                     ]]>      
+                                               
+                     <if test="circuit_id !=null and circuit_id!='' "> and circuitid = #{circuit_id} </if>
+                     
+                     <if test="user_id !=null and user_id !='' ">  
+                     	and (select max(p.useunit)
+                              from circuitbusilink b, circuitbusigroup p
+                             where b.lineid = tr_circuit.circuitid
+                               and b.busigroupid = p.busigroupid
+                               and b.lineresid = 'TR_CIRCUIT')  in <include refid="RMCircults_userSql"/> 
+                      </if>                                                
+            	
+           <![CDATA[     ) ir ]]>
+			
+			<include refid="RMCircults_pageSql" />    
+
+		 <![CDATA[    ) kr
+		    on tr_circuit.circuitid = kr.circuitid0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+	
+
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<config tip="南网总调">
+	<activemq_dir tip="南网ActiveMQ消息总线配置">
+		<primary_mq tip="主服务器">
+			<param name="host" value="10.50.15.99" tip="总线IP地址 " />
+			<param name="port" value="60616" tip="监听端口 " />
+			<param name="filehost" value="10.50.15.99" tip="文件上传IP地址 " />
+			<param name="fileport" value="60618" tip="文件上传端口 " />
+			<param name="username" value="" tip="用户名" />
+			<param name="password" value="" tip="密码" />			
+		</primary_mq>
+		<secondary_mq tip="备服务器">
+			<param name="host" value="" tip="总线IP地址 " />
+			<param name="port" value="" tip="监听端口 " />
+			<param name="fileport" value="" tip="文件上传端口 " />
+			<param name="username" value="" tip="用户名" />
+			<param name="password" value="" tip="密码" />
+		</secondary_mq>
+	</activemq_dir>
+
+	<work_mode tip="工作方式配置">
+		<work_type>
+			<param name="resource" value="true" />
+			<param name="operation" value="false" />
+			<param name="monitor" value="false" />
+		</work_type>
+		
+		<resource_cfg tip="资源管理配置">
+			<param name="classpath" value="com.hj.activemq.HjActiveMQResource" tip="接口实现类" />
+			<param name="size" value="3" tip="线程池大小" />
+			<param name="listen" value="0100-01080101" tip="消息监听队列名" />
+			<param name="send" value="01080101-0100" tip="消息发送队列名" />
+		</resource_cfg>
+	</work_mode>
+
+	<pub_cfg tip="通用配置">
+		<param name="" value="" tip="" />
+	</pub_cfg>
+
+	<version>2016-09</version>
+</config>

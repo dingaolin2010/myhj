@@ -1,0 +1,35 @@
+1、把资源实例插入表 Base_Select_List ，带sessionid，定义好sessionid值，变量p_sessionid
+insert into Base_Select_List(Recid, Sessionid, Resid, Insid)
+values(sys_guid(),p_sessionid,[资源],[实例]);
+2、调用过程 busi_analysis.n_m_Analyze
+declare a varchar2(100);
+begin
+  busi_analysis.n_m_Analyze('<P_SESSIONID>'||p_sessionid||'</P_SESSIONID><P_TYPE>0</P_TYPE>',a);
+end;
+3、执行完后提交事务，结果在表 base_select_result 中
+select c.circuitid circuit_id,
+       c.circuitcode circuit_code,
+       c.circuitname circuit_name,
+       dbo.sf('tr_circuit','rate',c.rate,null) rate,
+       dbo.sf('tr_circuit','class',c.class,null) net_type,
+       dbo.sf('tr_circuit','class',c.class,null) disp_type,
+       c.dispatchid oper_id,
+       c.customerid user_name,
+       c.finishdate beg_date,
+       dbo.sf('tr_circuit','worktype',c.worktype,null) status,
+       c.a_sn station_a_id,
+       c.z_sn station_z_id,
+       dbo.sf('tr_circuit','a_sn',c.a_sn,null) station_a_name,
+       dbo.sf('tr_circuit','z_sn',c.z_sn,null) station_z_name,
+       c.a_devrxportid port_a_id,
+       c.z_devrxportid port_z_id,
+       dbo.sf('tr_circuit','a_devrxportid',c.a_devrxportid,null) port_a_name,
+       dbo.sf('tr_circuit','z_devrxportid',c.z_devrxportid,null) port_z_name,
+       c.a_tsid slot_a,
+       c.z_tsid slot_z,
+       decode(r.appstatus,0,'影响',1,'中断') influence,
+       dbo.sf('tr_circuit','busitype',c.busitype,null) bus_type
+  from base_select_result r, tr_circuit c
+ where r.sessionid = p_sessionid
+   and r.resid = 'TR_CIRCUIT'
+   and r.insid = c.circuitid;

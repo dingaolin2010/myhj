@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!--  6.1.12	拓扑图查看  -->
+
+	<!-- 返回图片信息 -->
+	<resultMap type="com.hj.entity.Image" id="topImageId"  >
+		<result property="fileid"     column="fileid" 	javaType="String" jdbcType="VARCHAR" />
+		<result property="docname"      column="docname" 	javaType="String" jdbcType="VARCHAR" />
+	    <result property="blobsize" 	column="blobsize"   javaType="long" jdbcType="VARCHAR" />  
+	    <result property="photo"  		column="photo"   	javaType="byte[]" jdbcType="BLOB"  typeHandler="org.apache.ibatis.type.BlobTypeHandler"  />  
+	</resultMap>
+
+
+	<!-- 公共 动态分页查询条件 -->
+	<sql id="RMTop_pageSql">
+		<if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMTop_userSql">
+		( select distinct
+		hum.MANATYPE
+		from HJFIX_USER hu
+		left join HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+		where hu.userName =#{user_id}
+			<if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>
+		)
+	</sql>
+
+	<!--6.1.12.1	拓扑图查询  -->
+	<select id="getTopLinksSqlId"  parameterType="Map" resultMap="topImageId">
+	 	<![CDATA[ 
+		 select 
+			  d.DOCNAME fileid,
+			  d.docname, 
+			  c.filebody photo,
+			  c.blobsize
+		  from hjfix_resdoc d, hndldoc.sys_attachcontext c
+		 where d.docid = c.pointid
+		   and d.resid = 'TR_EMS_TOPO'
+		   and d.DOCNAME like '%'|| #{system_name} ||'%'
+		   and  rownum = 1 
+		]]>
+	</select>
+
+ 
+ 	<!-- 6.1.12.2	传输段查询 -->
+	<select id="getAllTransRoutesSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select portlinkid trans_id,
+		       linkname trans_name,
+		       dbo.sr(ancresid, ancresinsid) equip_a,
+		       dbo.sr('TR_DEVPORT', aportid) port_a,
+		       dbo.sr(bncresid, bncresinsid) equip_z,
+		       dbo.sr('TR_DEVPORT', Bportid) port_z,
+		       dbo.sf('TR_PORTLINK', 'RATE', RATE, null) rate,
+		       ' ' length,
+		       (select m.systemname
+		          from TR_TRSYSTEM m
+		         where m.systemid = tr_portlink.SYSTEMID) system_name
+			  from tr_portlink
+			 inner join (select portlinkid tr_portlink0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            portlinkid
+		                       from tr_portlink
+		                      WHERE 1=1
+		                ]]>
+		                
+		                <if test="trans_name !=null and trans_name !='' ">
+		                	and  linkname like '%'|| #{trans_name} ||'%'
+		                </if>
+		                
+		                <![CDATA[ ) ir ]]>
+		              
+		       	  	<include refid="RMTop_pageSql" />
+		  <![CDATA[   ) kr
+		    on tr_portlink.portlinkid = kr.tr_portlink0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+
+ 
+ 
+ 	<!-- 6.1.12.3	时隙查询  -->
+	<select id="getAllTimeSlotsSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select tsname time_id,
+       dbo.sr('TR_DEVPORT', portid) port_id,
+       dbo.sr('TR_PORTTS', parenttsid) p_id,
+       ' ' vc4,
+       ' ' vc3,
+       ' ' vc2,
+       ' ' vc12,
+       dbo.sf('TR_PORTTS', 'RATE', rate, null) rate,
+       ' ' dir
+		  from TR_PORTTS
+		 inner join (select tsid TR_PORTTS0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            tsid
+		                       from TR_PORTTS
+		                      WHERE  1=1 
+				]]>
+				
+					<if test="port_id !=null and port_id !='' ">
+						and PORTID = #{port_id}
+					</if>
+		             
+	             <if test="user_id !=null and user_id !='' ">
+      	                 and (select max(sdh.manatype)
+                                    from tr_sdh sdh, tr_devport po
+                                   where sdh.devid = po.devinsid
+                                     and po.devresid = 'TR_SDH'
+                                     and po.portid = TR_PORTTS.PORTID)  in  <include refid="RMTop_userSql"/>
+		             </if>             
+		                            
+		   <![CDATA[       ) ir ]]>
+			
+			<include refid="RMTop_pageSql"/>
+					       
+		<![CDATA[     ) kr
+		    on TR_PORTTS.tsid = kr.TR_PORTTS0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+ 
+ 
+	 <!-- 6.1.12.4	交叉查询  -->
+	<select id="getAllCrossSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select dbo.sr(ncresid, ncresinsid) equip_id,
+		       dbo.sr('TR_DEVPORT', aportid) prot_a,
+		       dbo.sr('TR_PORTTS', atsid) slot_a,
+		       dbo.sr('TR_DEVPORT', Bportid) port_z,
+		       dbo.sr('TR_PORTTS', Btsid) lot_z,
+		       dbo.sf('TR_INNERJUMP', 'RATE', rate, null) rate,
+		       INNERJUMPNAME cross_id,
+		       (case
+		         when jumptype = '1' then
+		          'B通道'
+		         else
+		          'A通道'
+		       end) type
+		  from TR_INNERJUMP
+		 inner join (select innerjumpid TR_INNERJUMP0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            innerjumpid
+		                       from TR_INNERJUMP
+		                      WHERE 1=1
+		          ]]>             
+		                      <if test="port_id !=null and port_id !='' ">
+		                      		and (aportid = #{port_id} or bportid = #{port_id} ) 
+		                      </if>
+		                      
+		                      <if test="slot_id !=null and slot_id !='' ">
+		                      	and (atsid = #{slot_id} or Btsid = #{slot_id} )
+		                      </if>     
+		                      
+		                      <if test="user_id !=null and user_id !='' ">     
+		                           and (select h.manatype
+		                                from tr_sdh h
+		                               where h.devid = TR_INNERJUMP.ncresinsid)  in  <include refid="RMTop_userSql" />
+		                        </if> 
+		                             
+		       	<![CDATA[  ) ir ]]>
+		             	
+		            <include refid="RMTop_pageSql"/>
+		             	  
+		  	<![CDATA[ ) kr
+		    on TR_INNERJUMP.innerjumpid = kr.TR_INNERJUMP0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+</mapper>

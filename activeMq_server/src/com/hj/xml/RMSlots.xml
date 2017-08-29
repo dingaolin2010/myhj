@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 机槽查询 -->
+	
+		<!-- 公共 动态分页查询条件  -->
+	<sql id="RMSSlots_pageSql">
+		  <if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+	
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMSSlots_userSql">
+	   ( select  distinct
+		       hum.MANATYPE
+			  from HJFIX_USER hu 
+			  left join  HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+			   where  hu.userName =#{user_id}
+		      <if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>      
+		      )                                    
+	</sql>	
+	
+	
+	<!-- 6.1.4.1	机槽查询-->
+	<select id="getAllSlotsSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select
+		  	   slot_id,
+		       sn,
+		       slot_name,
+		       name_std,
+		       status,
+		       equip_id,
+		       rack_id,
+		       slot_type,
+		       remark,
+		       width,
+		       length,
+		       qr_code
+		  from v_slot_TrandOp
+		 inner join (select slot_id slot_id0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            slot_id
+		                       from v_slot_TrandOp
+		                      WHERE 1=1
+		    ]]>
+		    
+		             <if test="slot_id!=null and slot_id!='' "> and slot_id = #{slot_id} </if>	
+					
+					 <if test="rack_id!=null and rack_id!='' "> and rack_id = #{rack_id} </if>
+					       					   
+					 <if test="rack_name!=null and rack_name!='' "> and rack_name like  '%'|| #{rack_name} ||'%' </if>	
+		             
+		             <if test="user_id!=null and user_id!='' "> and MANATYPE in <include refid="RMSSlots_userSql" /> </if>
+		             
+		      <![CDATA[    ) ir ]]>
+		             
+		  	<!-- 引用 公共分页 -->
+	       <include refid="RMSRack_pageSql"/>
+		     <![CDATA[ ) kr
+		    on v_slot_TrandOp.slot_id = kr.slot_id0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+</mapper>

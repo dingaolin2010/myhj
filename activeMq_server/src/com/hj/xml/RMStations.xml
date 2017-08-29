@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 站点管理 -->
+	
+		<!-- 机房 -->
+		<!-- 公共 动态分页查询条件  -->
+	<sql id="RMStations_pageSql">
+		  <if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+	
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMStations_userSql">
+	   ( select  distinct
+		       hum.MANATYPE
+			  from HJFIX_USER hu 
+			  left join  HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+			   where  hu.userName =#{user_id}
+		      <if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>      
+		      )                                    
+	</sql>	
+	
+	
+	
+	<!--  6.1.1.1	站点查询 获取通信站点列表和站点详情的方法（getAllStations） 带分页查询 -->
+	<select id="getAllStationsSqlId" parameterType="Map"
+		resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		    select sn  station_id,
+		       stno  station_code,
+		       stname  station_name,
+		       supname  name_std,
+		       dbo.sf('COM_STATION','STATIONTYPE',stationtype,null)  station_type, 
+		       dbo.sf('COM_STATION','RESGRADE',resgrade,null)  voltage_class,
+		       dbo.sr('COM_AREA',areasn)  belong_zone,
+		       staddress  addr,
+		       longitudes  lon,
+		       latitudes  latit,
+		       dbo.sf('COM_STATION','MANATYPE',MANATYPE,null)  disp_dept,
+		       dbo.sf('COM_STATION','DISPATCHNAME',DISPATCHNAME,null)  disp_agency,
+		       dbo.sf('COM_STATION','MAINTAIN',MAINTAIN,null)  maintain_dept,
+		       to_char(WORKDATE,'yyyy-mm-dd')  beg_time,
+		       ''  x_coord,
+		       ''  y_coord,
+		         qr_code
+		   from com_station
+		   inner join (select SN SN0001, rownum_ PAM_ROWNUM
+               from (select   
+                            ROW_NUMBER() OVER(order by STNAME) + 0 AS rownum_,
+                            SN
+                       from
+                            COM_STATION
+                            where 1=1
+              ]]>
+              
+             <!-- station_name	站点名称 -->
+              <if test="station_name!=null and station_name!='' ">  <![CDATA[ 	 and  stname like  '%'|| #{station_name} ||'%'    ]]> </if>
+			  
+			  <!-- station_id	站点ID -->
+			   <if test="station_id!=null and station_id!='' ">  <![CDATA[ 	 and  SN =  #{station_id}    ]]> </if>
+			  
+               <if test="qr_code !=null and qr_code !='' ">  <![CDATA[ 	and qr_code = #{qr_code}  ]]> </if> 
+			  
+			  <!-- user_id	用户ID  -->
+			   <if test="user_id!=null and user_id!='' ">  and MANATYPE in <include refid="RMStations_userSql"/> </if>
+             
+              
+              <![CDATA[    
+                    ) ir
+              ]]>
+              
+           <!-- 引用 公共分页 -->
+	       <include refid="RMStations_pageSql"/>
+             
+             <![CDATA[    
+                       ) kr
+						 on COM_STATION.SN = kr.SN0001  order by kr.PAM_ROWNUM
+              ]]>
+              
+	</select>
+
+
+
+	<!-- 站点内机房查询 -->
+	<select id="getAllRoomsSqlIdInRMStations" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+			   select mroomid room_id,
+				       mroomcode room_codem,
+				       mroomname room_name,
+				       supname name_std,
+				       dbo.sf('COM_MROOM', 'MROOM', mroom, null) room_type,
+				       layer floor_num,
+				       MROOMHAO room_no,
+				       dbo.sf('COM_MROOM', 'MANATYPE', MANATYPE, null) disp_dept,
+				       dbo.sf('COM_MROOM', 'DUTYDEPART', DUTYDEPART, null) maintain_dept,
+				       mroomlen length,
+				       mroolwidth width,
+				       height height,
+				       mroomlen * mroolwidth area,
+				       dbo.sr('COM_STATION',sn) belong_station,
+				       sn station_id,
+				       
+				        (select n.longitudes from com_station n where n.sn=com_mroom.sn) lon,
+       					(select n.latitudes from com_station n where n.sn=com_mroom.sn) latit,
+				       
+				        qr_code
+				  from com_mroom
+				 inner join (select mroomid mroomid001, rownum_ PAM_ROWNUM
+				               from (select 
+		                            ROW_NUMBER() OVER(order by mroomname) + 0 AS rownum_,
+		                            mroomid
+		                       from com_mroom
+		                       WHERE 1=1 
+		                        ]]>
+		                        
+		                        <if test="station_id !=null and station_id!='' ">
+								    <![CDATA[ 	 and  sn= #{station_id}   ]]>
+								</if>
+							   
+							     <if test="qr_code !=null and qr_code !='' ">
+								    <![CDATA[ 	 and  qr_code= #{qr_code}   ]]>
+								</if>
+							   
+							   
+							   <if test="user_id!=null and user_id!='' ">  and com_mroom.manatype in <include refid="RMStations_userSql"/> </if>
+							     
+		                  <![CDATA[  
+		                     ) ir
+		                     ]]>
+		                 <!-- 引用 公共分页 -->
+	       				<include refid="RMStations_pageSql"/>
+		   <![CDATA[
+		    ) kr
+			    on com_mroom.mroomid = kr.mroomid001
+			 order by kr.PAM_ROWNUM
+	 
+		]]>
+	</select>
+
+
+
+	<!-- 获取站点内通信光缆的方法 -->
+	<select id="getAllOcablesSqlIdInRMStations" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select OPTSEGID ocable_id,
+		       OPTSEGCODE ocable_code,
+		       OPTSEGNAME ocable_name,
+		       A_SN station_a_id,
+		       B_SN station_z_id,
+		       dbo.sf('OPTSEG', 'A_SN', A_SN, null) station_a_name,
+		       dbo.sf('OPTSEG', 'B_SN', B_SN, null) station_z_name,
+		       A_MROOMID room_a_id,
+		       dbo.sf('OPTSEG', 'A_MROOMID', A_MROOMID, null) room_a,
+		       B_MROOMID room_z_id,
+		       dbo.sf('OPTSEG', 'B_MROOMID', B_MROOMID, null) room_z,
+		       '' trans_line,
+		       '' line_name,
+		       USERLINELEN length,
+		       fibernum fiber_num,
+		       dbo.sf('OPTSEG', 'OPTSETUP', optsetup, null) lay_way,
+		       dbo.sf('OPTSEG', 'FACSTATUS', FACSTATUS, null) status,
+
+		       to_char(trunc(workdate, 'dd'), 'yyyy-mm-dd') beg_date,
+		       
+		       (select dbo.sf('COM_STATION', 'MAINTAIN', n.MAINTAIN, null)
+		          from com_station n  where n.sn = optseg.a_sn) maintain_dept,
+		       
+		       dbo.sf('OPTSEG', 'MANAGEUNIT', MANAGEUNIT, null) disp_dept,
+		       to_char(trunc(RESTDATE, 'dd'), 'yyyy-mm-dd') end_date,
+
+		       dbo.sf('OPTSEG', 'MODELID', MODELID, null) model,
+		       dbo.sf('OPTSEG', 'VENDORID', VENDORID, null) vender,
+		       dbo.sf('OPTSEG', 'OPTTPYE', OPTTPYE, null) ocable_type,
+		       remark remarks,
+		       '' voltage_class
+		  FROM OPTSEG
+		 inner join (select OPTSEGID OPTSEGID0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by OPTSEGCODE) + 0 AS rownum_,
+		                            OPTSEGID
+		                       from OPTSEG
+		                      WHERE  1=1
+		       	 ]]>              
+		
+                <if test="station_id!=null and station_id!='' ">
+			 		<![CDATA[ and  A_SN= #{station_id}   ]]>
+				</if>
+				      
+ 				<if test="user_id!=null and user_id!='' ">  and OPTSEG.MANAGEUNIT in <include refid="RMStations_userSql"/> </if> 
+		
+	            <![CDATA[           
+	                      ) ir
+	                 ]]>
+		       			
+       			          <!-- 引用 公共分页 -->
+	      				 <include refid="RMStations_pageSql"/>
+
+					   
+		          <![CDATA[           
+		                  ) kr
+		    on OPTSEG.OPTSEGID = kr.OPTSEGID0001
+		 order by kr.PAM_ROWNUM
+		 
+		]]>
+	</select>
+
+
+	<!-- 站点信息修改的方法 -->
+	<update id="changeStationInfoSqlId" parameterType="Map" >
+		 
+		  update com_station   
+		      <trim prefix="set" suffixOverrides=",">
+			  	<if test="addr !=null and addr !='' ">STADDRESS = #{addr},</if>
+			  	<if test="lon !=null and lon !='' ">LONGITUDES = #{lon},</if>
+			  	<if test="latit != null and latit!='' ">LATITUDES = #{latit},</if>
+			  	<if test="qr_code != null and qr_code !='' ">qr_code = #{qr_code},</if>
+			  	
+			 </trim>  
+		 where SN = #{station_id}
+		          
+	</update>
+
+
+	<!-- 站点内GPS坐标更新的方法 -->
+	<update id="changeStationGPSInfoSqlId" parameterType="Map" >
+		update com_station   
+   			  <trim prefix="set" suffixOverrides=",">
+			  	<if test="lon!=null and lon!='' ">LONGITUDES = #{lon},</if>
+			  	<if test="latit!=null and latit!='' ">LATITUDES = #{latit},</if>
+			 </trim>
+		 where SN = #{station_id}
+	</update>
+
+</mapper>

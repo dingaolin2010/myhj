@@ -1,0 +1,4 @@
+JedisClusterConfig 已集成redis3.0
+
+1.在service层添加spring注解
+2.save/update方法用@CachePut，get方法用@Cacheable，delete/remove方法用@CacheEvict

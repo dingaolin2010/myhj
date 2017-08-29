@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 6.4.3	附件上传  、6.4.4	附件下载-->
+	<!-- 返回图片信息 -->
+	<resultMap type="com.hj.entity.Image" id="imageId"  >
+		<result property="fileid"     column="fileid" 	javaType="String" jdbcType="VARCHAR" />
+		<result property="docname"      column="docname" 	javaType="String" jdbcType="VARCHAR" />
+	    <result property="blobsize" 	column="blobsize"   javaType="long" jdbcType="VARCHAR" />  
+	    <result property="photo"  		column="photo"   	javaType="byte[]" jdbcType="BLOB"  typeHandler="org.apache.ibatis.type.BlobTypeHandler"  />  
+	
+	</resultMap>
+
+	<!-- 6.4.3	附件上传   6.4.4 
+	<insert id="insertImageSqlId" parameterMap="imageId">
+			insert into  hndldoc.sys_attachcontext (pointid,blobsize,EXTTYPE) 
+			values ('a8c789ec3eb94d8e809c3b6b4a69a592','1000','png')
+	</insert>--> 
+	
+	<!--6.4.4	附件下载-->
+	<select id="getImageSqlId"  parameterType="Map" resultMap="imageId">
+	 	<![CDATA[ 
+		  select 
+				  d.DOCNAME fileid,
+				  d.docname, 
+				  c.filebody photo,
+				  c.blobsize
+				  from hjfix_resdoc d, hndldoc.sys_attachcontext c
+				 where d.docid = c.pointid
+				   and d.docid = #{fileid}
+				   and  rownum = 1 
+		]]>
+	</select>
+
+
+</mapper>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!--  6.1.10	配线管理    --> 
+	
+	<!-- 公共 动态分页查询条件 -->
+	<sql id="RMDistribution_pageSql">
+		<if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMDistribution_userSql">
+		( select distinct
+		hum.MANATYPE
+		from HJFIX_USER hu
+		left join HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+		where hu.userName =#{user_id}
+			<if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>
+		)
+	</sql>
+	
+	
+	<!--   6.1.10.1	配线端子查询   -->
+	<select id="getAllModuleTermsSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select term_id,
+		       term_name,
+		       name_std,
+		       col_index,
+		       row_index,
+		       term_type,
+		       term_label,
+		       sn,
+		       status,
+		       module_id,
+		       module_name,
+		       remark
+		  from v_peixian_port
+		 inner join (select term_id term_id0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            term_id
+		                       from v_peixian_port
+		                      WHERE 1=1 
+			 ]]> 	
+			 
+			 	<if test="module_id !=null  and module_id !='' ">
+					and module_id=#{module_id}
+			 	</if>
+			 	
+			 	<if test="term_id !=null and term_id !='' ">
+	  				and term_id =#{term_id}
+			 	</if>
+			 	
+			 	<if test="module_name !=null and module_name !='' ">
+			 		and module_name like '%'|| #{module_name} ||'%'
+			 	</if>
+			                      
+			    <if test="user_id !=null and user_id !='' ">
+			 		and manatype  in <include refid="RMDistribution_userSql" />
+			 	</if>
+		                        
+		    <![CDATA[                                      
+		                    ) ir
+		        ]]>        
+		       	
+		       	<include refid="RMDistribution_pageSql" />
+		       	    
+		 <![CDATA[  ) kr on v_peixian_port.term_id = kr.term_id0001  order by kr.PAM_ROWNUM ]]>
+	</select>
+ 
+	<!--   
+		6.1.10.2	配线端子信息修改 
+	 	需要修改 、op_devport、tr_devport两个表
+	 -->
+	<update id="changeModuleTermIn_op_devport_SqlId" parameterType="Map" >
+	 	update op_devport   
+   			  <trim prefix="set" suffixOverrides=",">
+			  	<if test="term_label != null and term_label !='' ">CSG_LABELINFO = #{term_label},</if>
+			 </trim>
+		 where portid = #{term_id}
+	</update>
+	
+	<update id="changeModuleTerm_tr_devport_SqlId" parameterType="Map" >
+	 	update tr_devport   
+   			  <trim prefix="set" suffixOverrides=",">
+			  	<if test="term_label != null and term_label !='' ">BUSIINFO = #{term_label},</if>
+			 </trim>
+		 where portid = #{term_id}
+	</update>
+</mapper>

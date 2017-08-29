@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 6.1.7	光缆  -->
+	
+	
+	<!-- 公共 动态分页查询条件  -->
+	<sql id="RMOcable_pageSql">
+		  <if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+	
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMOcable_userSql">
+	   ( select  distinct
+		       hum.MANATYPE
+			  from HJFIX_USER hu 
+			  left join  HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+			   where  hu.userName =#{user_id}
+		      <if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>      
+		      )                                    
+	</sql>	
+	
+	<!--  6.1.7.1	光缆查询  -->
+	<select id="getAllOcablesSqlIdInRMOcable"  parameterType="Map" resultType="java.util.HashMap">
+	 <![CDATA[ 
+		select 
+				   OPTSEGID ocable_id,
+			       OPTSEGCODE ocable_code,
+			       OPTSEGNAME ocable_name,
+			       A_SN station_a_id,
+			       B_SN station_z_id,
+			       dbo.sf('OPTSEG', 'A_SN', A_SN, null) station_a_name,
+			       dbo.sf('OPTSEG', 'B_SN', B_SN, null) station_z_name,
+			       A_MROOMID room_a_id,
+			       dbo.sf('OPTSEG', 'A_MROOMID', A_MROOMID, null) room_a,
+			       B_MROOMID room_z_id,
+			       dbo.sf('OPTSEG', 'B_MROOMID', B_MROOMID, null) room_z,
+			       ' ' trans_line,
+			       ' ' line_name,
+			       nvl(USERLINELEN,0) length,
+			       nvl(fibernum,0) fiber_num,
+			       dbo.sf('OPTSEG', 'OPTSETUP', optsetup, null) lay_way,
+			       dbo.sf('OPTSEG', 'FACSTATUS', FACSTATUS, null) status,
+			       workdate beg_date,
+			       dbo.sf('OPTSEG', 'DUTYUNITID', DUTYUNITID, null) maintain_dept,
+			       dbo.sf('OPTSEG', 'MANAGEUNIT', MANAGEUNIT, null) disp_dept,
+			       RESTDATE end_date,
+			       dbo.sf('OPTSEG', 'MODELID', MODELID, null) model,
+			       dbo.sf('OPTSEG', 'VENDORID', VENDORID, null) vender,
+			       dbo.sf('OPTSEG', 'OPTTPYE', OPTTPYE, null) ocable_type,
+			       remark remarks,
+			       ' ' voltage_class
+			  FROM OPTSEG
+			 inner join (select OPTSEGID OPTSEGID0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by OPTSEGCODE) + 0 AS rownum_,
+			                            OPTSEGID
+			                       from OPTSEG
+			                      WHERE 1=1 
+			                   ]]>
+			
+                     <if test="ocable_id !=null and ocable_id !='' "> and OPTSEGID = #{ocable_id} </if>
+                     
+                     <if test="station_id !=null and station_id !='' "> and (a_sn = #{station_id} or b_sn = #{station_id} ) </if>
+                     
+                     <if test="room_id !=null and room_id !='' "> and (A_MROOMID = #{room_id} or b_MROOMID = #{room_id})  </if>
+                     
+                     <if test="ocable_name !=null and ocable_name !='' "> 
+                     		and  OPTSEGNAME like '%' || #{ocable_name} || '%'   
+                      </if>
+                     
+                     <if test="station_name !=null and station_name !='' ">
+                           and ( 
+                           		dbo.sf('OPTSEG', 'A_SN', A_SN, null) like '%'|| #{station_name} ||'%' 
+                             or dbo.sf('OPTSEG', 'b_SN', b_SN, null ) like '%'|| #{station_name} ||'%' 
+                              ) 
+                     </if>       
+                     
+                    <if test="room_name !=null and room_name !='' ">
+                           and  (
+                                	dbo.sf('OPTSEG', 'A_MROOMID', A_MROOMID, null) like  '%'|| #{room_name} ||'%' 
+                                or  dbo.sf('OPTSEG', 'B_MROOMID', b_MROOMID, null) like  '%'|| #{room_name} ||'%'
+                              ) 
+                     </if>                                        
+			         
+			         <if test="user_id !=null and user_id !='' "> 
+                         and MANAGEUNIT in <include refid="RMOcable_userSql" /> 
+                      </if>
+			                                   
+             		<![CDATA[ ) ir ]]>  
+				       <include refid="RMOcable_pageSql"/>
+		          
+		          <![CDATA[           
+				     ) kr
+		    on OPTSEG.OPTSEGID = kr.OPTSEGID0001
+		 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+	
+	
+
+	<!--  6.1.7.2	光缆承载的光路查询   -->
+	<select id="getAllOcableRoutesSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		   select optroadid oroute_id,
+		       optroadname oroute_name,
+		       a_mroomid room_a_id,
+		       z_mroomid room_z_id,
+		       dbo.sr('COM_MROOM', a_mroomid) room_a_name,
+		       dbo.sr('COM_MROOM', z_mroomid) room_z_name,
+		       a_sn station_a_id,
+		       z_sn station_z_id,
+		       dbo.sr('COM_STATION', a_sn) station_a_name,
+		       dbo.sr('COM_STATION', z_sn) station_z_name
+		  from OPTROAD
+		 inner join (select optroadid optroadid0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            optroadid
+		                       from OPTROAD
+		                      WHERE  1=1 and
+		                            (exists
+		                             (select 1
+		                                 from fiber r
+		                                where (r.optsegid = '' or nvl('', '-1') = '-1')
+		                                  and r.optroadid = OPTROAD.optroadid))
+		                          ]]>
+
+	                         <if test="ocable_id !=null and ocable_id !='' ">
+	                          and exists
+                             (select 1
+                                from fiber r
+                               where r.optsegid = #{ocable_id}
+                                 and r.optroadid = optroad.optroadid)
+	                         </if>
+
+		         <![CDATA[  ) ir ]]> 
+		      <include refid="RMOcable_pageSql"/>
+		<![CDATA[   
+		 ) kr
+	    on OPTROAD.optroadid = kr.optroadid0001
+	 order by kr.PAM_ROWNUM
+		]]>
+	</select>
+
+
+
+	<!-- 6.1.7.3	光路承载的电路查询 -->
+	<select id="getAllOcableCircuitsSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  select circuitid circuit_id,
+			       circuitcode circuit_code,
+			       circuitname circuit_name,
+			       dbo.sf('TR_CIRCUIT', 'RATE', RATE, null) rate,
+			       '' net_type,
+			       (select max(dbo.sf('CIRCUITBUSIGROUP', 'USEUNIT', p.USEUNIT, null))
+			          from circuitbusilink b, circuitbusigroup p
+			         where b.lineid = tr_circuit.circuitid
+			           and b.busigroupid = p.busigroupid
+			           and b.lineresid = 'TR_CIRCUIT') disp_type,
+			       (select dbo.sr('KAITONG_APPLYBILL', l.orderid)
+			          from KAITONG_DESIGNBILL l
+			         where l.ITEMTYPE = 'TR_CIRCUIT'
+			           and l.REMOTEID = tr_circuit.circuitid) oper_id,
+			       '' user_name,
+			       null beg_date,
+			       dbo.sf('TR_CIRCUIT', 'BUSISTATUS', BUSISTATUS, null) status,
+			       tr_circuit.a_sn station_a_id,
+			       tr_circuit.z_sn station_z_id,
+			       (select n.stname from com_station n where n.sn = tr_circuit.a_sn) station_a_name,
+			       (select n.stname from com_station n where n.sn = tr_circuit.z_sn) station_z_name,
+			       tr_circuit.a_devrxportid port_a_id,
+			       tr_circuit.z_devrxportid port_z_id,
+			       (select o.portcode
+			          from tr_devport o
+			         where o.portid = tr_circuit.a_devrxportid) port_a_name,
+			       (select o.portcode
+			          from tr_devport o
+			         where o.portid = tr_circuit.z_devrxportid) port_z_name,
+			       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.a_tsid) slot_a,
+			       (select s.tsname from TR_PORTTS s where s.tsid = tr_circuit.z_tsid) slot_z
+			  from tr_circuit
+			 inner join (select circuitid circuitid0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+			                            circuitid
+			                       from tr_circuit
+			                      WHERE  1=1  
+		 ]]>
+			                 
+			                  <if test="oroute_id !=null and oroute_id !='' ">
+			                  	 and exists
+			                             (select 1
+			                                from TR_PORTLINK k
+			                               where exists
+			                               (select 1
+			                                        from TR_LOGICCHN l
+			                                       where l.circuitid = TR_CIRCUIT.circuitid
+			                                         and l.portlinkid = k.portlinkid)
+			                              and k.supinsid = #{oroute_id})
+			                  </if>    
+			                  
+			               <if test="user_id !=null and user_id !='' ">      
+			                      and  (select to_char(max(p.USEUNIT))
+			                                from circuitbusilink b, circuitbusigroup p
+			                               where b.lineid = tr_circuit.circuitid
+			                                 and b.busigroupid = p.busigroupid
+			                                 and b.lineresid = 'TR_CIRCUIT')  in  <include refid="RMOcable_userSql" />
+			              </if>      
+			                                
+			  <![CDATA[  ) ir ]]>
+			            
+			          
+			            <include refid="RMOcable_pageSql"/>
+			             
+			  <![CDATA[   ) kr on tr_circuit.circuitid = kr.circuitid0001 order by kr.PAM_ROWNUM ]]>
+	</select>
+
+
+
+  	<!-- 6.1.7.4	光缆信息修改  -->
+	<update id="changeOcableInfoSqlId"  parameterType="Map" >
+			update OPTSEG
+		 	 <trim prefix="set" suffixOverrides=",">
+			  	<if test="beg_date != null and beg_date !='' " >WORKDATE = to_date(#{beg_date}, 'yyyy-MM-dd'),</if>
+			  	<if test="maintain_dept !=null and maintain_dept !='' " >DUTYUNITID = #{maintain_dept},</if>
+			  	<if test="disp_dept  !=null and disp_dept  !='' " >MANAGEUNIT = #{disp_dept},</if>
+			  	<if test="end_date !=null and end_date !='' ">RESTDATE = to_date(#{end_date}, 'yyyy-MM-dd'),</if>
+			  	<if test="remarks != null and remarks != '' " >REMARK = #{remarks},</if>
+			 </trim>
+			where OPTSEGID = #{ocable_id}
+	</update>
+  
+
+   	<!-- 6.1.7.5	光缆行走向经纬度修改 -->
+	<update id="changeOcablelatitudeSqlId"  parameterType="Map" >
+		update  OPTSEG
+		<trim prefix="set" suffixOverrides=",">
+			  <if test="ocable_id != null and ocable_id !='' " >passponits = #{direction},</if>
+		</trim>
+			where OPTSEGID = #{ocable_id}
+	</update>
+    
+    
+    <!-- 6.1.7.6	光纤查询 -->
+	<select id="getAllFibersSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select fiberid fiber_id,
+			       (select g.optsegname from optseg g where g.optsegid = fiber.optsegid) || '/第' ||
+			       fiberorder || '芯' name_std,
+			       '' fiber_type,
+			       dbo.sf('FIBER', 'BUSISTATUS', BUSISTATUS, null) status,
+			       fiberorder sn,
+			       fiberlen length,
+			       optsegid ocable_id,
+			       (select g.optsegname from optseg g where g.optsegid = fiber.optsegid) ocable_name,
+			       dbo.sr(a_devresid, a_devinsid) equip_a_name,
+			       dbo.sr(b_devresid, b_devinsid) equip_z_name,
+			       dbo.sr(a_portresid, a_portinsid) term_a_name,
+			       dbo.sr(b_portresid, b_portinsid) term_z_name,
+			       a_devinsid equip_a_id,
+			       b_devinsid equip_z_id,
+			       a_portinsid term_a_id,
+			       b_portinsid term_z_id
+			  from fiber
+			 inner join (select fiberid fiberid0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+			                            fiberid
+			                       from fiber
+			                      WHERE  1=1 
+			     ]]>            
+			     	 <if test="equip_id !=null and equip_id !='' ">                                        
+		                  and ( a_devinsid = #{equip_id} or  b_devinsid = #{equip_id} )
+		             </if>      
+		             
+		             <if test="term_id !=null and term_id !='' ">
+	                    and (a_portinsid = #{term_id} or  b_portinsid = #{term_id} )
+	                  </if>    
+	                  
+	                  <if test="equip_name !=null and equip_name !='' ">
+	                  	and (dbo.sr(a_devresid, a_devinsid) like   '%'|| #{equip_name} || '%' 
+	                       or dbo.sr(b_devresid, b_devinsid) like  '%'|| #{equip_name} || '%'
+	                       )
+	                  </if>
+	                   
+	                   <if test="user_id !=null and user_id !='' ">
+	                     and (select g.MANAGEUNIT  from optseg g
+		                     where g.optsegid = fiber.optsegid)  in <include refid="RMOcable_userSql" />
+	                   </if>
+	                                   
+			          <![CDATA[   ) ir]]> 
+			             
+			           <include refid="RMOcable_pageSql"/>
+			                          
+			<![CDATA[   ) kr   on fiber.fiberid = kr.fiberid0001 order by kr.PAM_ROWNUM ]]>
+	</select>
+	
+	
+	
+     
+    <!--   6.1.7.7	接头盒查询  -->
+	<select id="getAllConnectBoxsSqlId"  parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select optjointid box_id,
+		       optjointname box_name,
+		       (select max(g.optsegid)
+		          from optseg g
+		         where (g.a_resid = 'OPTJOINT' and
+		               g.a_resinsid = optjoint.optjointid)
+		            or (g.b_resid = 'OPTJOINT' and
+		               g.b_resinsid = optjoint.optjointid)) ocable_id,
+		       (select max(g.optsegname)
+		          from optseg g
+		         where (g.a_resid = 'OPTJOINT' and
+		               g.a_resinsid = optjoint.optjointid)
+		            or (g.b_resid = 'OPTJOINT' and
+		               g.b_resinsid = optjoint.optjointid)) ocable_name,
+		       '' serial,
+		       dbo.sf('OPTJOINT', 'OPTJOINT', OPTJOINT, null) box_type,
+		       dbo.sf('OPTJOINT', 'VENDORID', VENDORID, null) vendor,
+		       dbo.sf('OPTJOINT', 'VENDORMODELID', VENDORMODELID, null) model,
+		       longitudes lng,
+		       latitudes lat,
+		       ADDRESS address,
+		       '' capacity,
+		       '' disp_dept,
+		       '' maintain_dept,
+		       WORKDATE productdate,
+		       remark remark
+		  from optjoint
+		 inner join (select optjoint optjoint0001, rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+		                            optjoint
+		                       from optjoint
+		                      WHERE  1=1
+		           ]]>
+		              
+		              <if test="box_id !=null and box_id !='' ">
+		              	and optjointid = #{box_id} 
+		              </if>
+		              
+		              <if test="box_name !=null and box_name !='' ">
+		              	and optjointname like '%' || #{box_name} || '%'
+		              </if>
+		                            
+		              <if test="ocable_id !=null and ocable_id !='' ">
+		              	 and exists
+                               (select 1
+                                        from optseg g
+                                       where ((g.a_resid = 'OPTJOINT' and
+                                             g.a_resinsid = optjoint.optjointid) or
+                                             (g.b_resid = 'OPTJOINT' and
+                                             g.b_resinsid = optjoint.optjointid))
+                                         and g.optsegid = #{ocable_id}
+                               )
+		              </if>             
+		              
+		              <if test="ocable_name !=null and ocable_name !='' ">
+		              	and exists
+                              (select 1
+                                   from optseg g
+                                 where ((g.a_resid = 'OPTJOINT' and
+                                       g.a_resinsid = optjoint.optjointid) or
+                                       (g.b_resid = 'OPTJOINT' and
+                                       g.b_resinsid = optjoint.optjointid))
+                                   and g.optsegname like '%' || #{ocable_name} || '%'
+                               )
+		              </if>           
+                                  
+                <![CDATA[ ) ir ]]>
+                                
+           	   <include refid="RMOcable_pageSql"/>
+		          
+			<![CDATA[	  ) kr on optjoint.optjoint = kr.optjoint0001 order by kr.PAM_ROWNUM ]]>
+	
+	</select>
+     
+    <!--    6.1.7.8	接头盒经纬度更新-->
+	<update id="changeConnectBoxInfoSqlId"  parameterType="Map" >
+	  		update  optjoint
+		<trim prefix="set" suffixOverrides=",">
+			  <if test="lon != null and lon !='' " >LONGITUDES = #{lon},</if>
+			  <if test="latit != null and latit !='' " >LATITUDES = #{latit},</if>
+		</trim>
+			where optjointid = #{box_id}
+	</update>
+</mapper>

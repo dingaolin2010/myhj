@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 机房 -->
+	<!-- 公共 动态分页查询条件 -->
+	<sql id="RMSRooms_pageSql">
+		<if
+			test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMSRooms_userSql">
+		( select distinct
+		hum.MANATYPE
+		from HJFIX_USER hu
+		left join HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+		where hu.userName =#{user_id}
+		<if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>
+		)
+	</sql>
+
+
+
+	<!-- 6.1.2.1 机房查询 -->
+	<select id="getAllRoomsSqlIdInRMSRooms" parameterType="Map"
+		resultType="java.util.HashMap">
+	 	<![CDATA[ 
+			   select 
+			   		   mroomid room_id,
+				       mroomcode room_code,
+				       mroomname room_name,
+				       supname name_std,
+				       dbo.sf('COM_MROOM', 'MROOM', mroom, null) room_type,
+				       layer floor_num,
+				       MROOMHAO room_no,
+				       dbo.sf('COM_MROOM', 'MANATYPE', MANATYPE, null) disp_dept,
+				       dbo.sf('COM_MROOM', 'DUTYDEPART', DUTYDEPART, null) maintain_dept,
+				       nvl(mroomlen,0) length,
+				       nvl(mroolwidth,0) width,
+				       nvl(height,0) height,
+				       nvl(mroomlen * mroolwidth,0) area,
+				       dbo.sr('COM_STATION', sn) belong_station,
+				       sn station_id,
+				       nvl((select n.longitudes from com_station n where n.sn = com_mroom.sn),0) lon,
+				       nvl((select n.latitudes from com_station n where n.sn = com_mroom.sn),0) latit,
+				       qr_code
+				  from com_mroom
+				 inner join (select mroomid mroomid001, rownum_ PAM_ROWNUM
+				               from (select 
+		                            ROW_NUMBER() OVER(order by mroomname) + 0 AS rownum_,
+		                            mroomid
+		                       from com_mroom
+		                       WHERE 1=1 
+		                        ]]>
+
+		<if test="station_id !=null and station_id !='' ">
+							 		<![CDATA[ 	 and  sn= #{station_id}   ]]>
+		</if>
+
+		<if test="room_name != null and room_name !='' ">
+							 		 <![CDATA[ 	 and  MROOMNAME like  '%'|| #{room_name} ||'%'    ]]>
+		</if>
+
+		<if test="room_id != null and room_id !='' ">
+							 		<![CDATA[ 	 and MROOMID= #{room_id}   ]]>
+		</if>
+
+		<if test="qr_code != null and qr_code !='' ">
+							 		<![CDATA[ 	 and qr_code= #{qr_code}   ]]>
+		</if>
+		
+		<if test="user_id!=null and user_id!='' ">
+			and com_mroom.manatype in
+			<include refid="RMSRooms_userSql" />
+		</if>
+							                       
+		                  <![CDATA[  
+		                     ) ir
+		                     ]]>
+
+		<include refid="RMSRooms_pageSql" />
+		   <![CDATA[
+		    ) kr
+			    on com_mroom.mroomid = kr.mroomid001
+			 order by kr.PAM_ROWNUM
+	 
+		]]>
+	</select>
+
+
+
+	<!-- 6.1.2.2 机房内机柜查询 -获取通信机柜列表和机柜详情的方法 -->
+	<select id="getAllRacksSqlIdInRMSRooms" parameterType="Map"
+		resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	SELECT RACKID rack_id,
+		       DEVICECODE rack_code,
+		       DEVICENAME rack_name,
+		       SUPNAME name_std,
+		       dbo.sf('COM_RACK', 'VENDORMODELID', VENDORMODELID, null) rack_type,
+		       dbo.sf('COM_RACK', 'VENDORID', VENDORID, null) vendor,
+		       dbo.sf('COM_RACK', 'MANATYPE', MANATYPE, null) disp_dept,
+		       
+		       (select dbo.sf('COM_MROOM', 'DUTYDEPART', m.DUTYDEPART, null)
+			          from com_mroom m
+			         where m.mroomid = com_rack.mroomid) maintain_dept,
+					
+			   RACKLENGTH / 1000 thick,
+		       RACKWIDTH / 1000 width,
+		       RACKHEIGHT / 1000 height,
+		       DEVICEHAO location_no,
+		       x0 x_coord,
+		       y0 y_coord,
+		       dbo.sf('COM_RACK', 'MROOMID', MROOMID, null) belong_room,		       
+		       MROOMID room_id
+		  FROM COM_RACK
+		   inner join (  
+		   			 select 
+		   			 	RACKID RACKID0001, 
+		   			 	rownum_ PAM_ROWNUM
+		               from (select ROW_NUMBER() OVER(order by DEVICECODE) + 0 AS rownum_,
+		                            RACKID
+		                       from COM_RACK WHERE 1 = 1 
+			]]>
+
+		<if test="room_id!=null and room_id!='' "> and MROOMID= #{room_id} </if>
+
+		<if test="user_id!=null and user_id!='' ">
+			and MANATYPE in
+			<include refid="RMSRooms_userSql" />
+		</if>
+		                      
+		  <![CDATA[  ) ir
+		  ]]>
+
+		<include refid="RMSRooms_pageSql" />
+	       
+	   <![CDATA[ ) kr
+		    on COM_RACK.RACKID = kr.RACKID0001
+		 order by kr.PAM_ROWNUM
+				  	
+		]]>
+	</select>
+
+
+	<!-- 机房信息修改的方法 -->
+	<update id="changeRoomInfoSqlId" parameterType="Map">
+		update com_mroom
+		<trim prefix="set" suffixOverrides=",">
+			<if test="floor_num!=null  and floor_num!='' ">LAYER = #{floor_num} ,</if>
+			<if test="room_no!=null    and room_no!='' ">ROOMNAME=#{room_no} ,</if>
+			<if test="disp_dept!=null  and disp_dept!='' ">MANATYPE=#{disp_dept} ,</if>
+			<if test="maintain_dept!=null and maintain_dept!='' ">DUTYDEPART=#{maintain_dept} ,</if>
+			<if test="length!=null and length!='' ">MROOMLEN=${length},</if>
+			<if test="width!=null and width!='' ">MROOLWIDTH=${width},</if>
+			<if test="height!=null and height!='' ">HEIGHT =${height},</if>
+			<if test="qr_code !=null and qr_code !='' ">qr_code =${qr_code},</if>
+			
+		</trim>
+		where MROOMID = #{room_id}
+	</update>
+
+</mapper>

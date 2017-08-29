@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!--  6.1.14	辅助功能	   --> 
+	
+	<!--  6.1.14.1	所属系统名称查询  -->
+	<select id="getNameAndStringValuesSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  
+		]]>
+	</select>
+	
+	
+	<!-- 6.4.2	树状节点选择属性  -->
+	<select id="getTreeXmlSqlIdSqlId" parameterType="Map" resultType="java.util.HashMap" >
+	 	<![CDATA[ 
+		  
+		]]>
+	</select>
+	
+	
+		<!--   6.4.2	附件上传  -->
+	<select id="uploadFileSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  
+		]]>
+	</select>
+	
+	<!--  6.4.2	附件下载  -->
+	<select id="FileDownloadModelSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  
+		]]>
+	</select>
+	
+	
+	
+</mapper>

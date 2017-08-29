@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ResourceManagement">
+
+	<!-- 6.1.8 电源 -->
+
+	<!-- 公共 动态分页查询条件 -->
+	<sql id="RMPower_pageSql">
+		<if test="page_count!=null and page_count!=''  and  page_index !=null and page_index !='' ">
+				<![CDATA[  where  rownum_ > ( ${page_index} - 1) *  ${page_count}  and rownum_ <= ${page_index} * ${page_count} ]]>
+		</if>
+	</sql>
+
+	<!-- 公共 动态用户查询 条件 -->
+	<sql id="RMPower_userSql">
+		( select distinct
+		hum.MANATYPE
+		from HJFIX_USER hu
+		left join HJFIX_UNIT_MANATYPE hum on hu.unitid = hum.unit
+		where hu.userName =#{user_id}
+			<if test="dept_code!=null and dept_code!=''  "> and hu.unitid = #{dept_code} </if>
+		)
+	</sql>
+
+
+	<!-- 6.1.8.1 电源查询 -->
+	<select id="getAllPowersSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  	select pw_switch.deviceid power_id,
+		     	  pw_switch.devicename power_name,
+			       dbo.sf('pw_switch', 'devtype', pw_switch.devtype, null) power_type,
+			       dbo.sf('pw_switch', 'VENDORID', pw_switch.VENDORID, null) vender,
+			       '' maintain_dept,
+			       dbo.sf('pw_switch', 'manatype', pw_switch.manatype, null) disp_dept,
+			       round(KWPERPORT) capacity,
+			       '' soft_version,
+			       to_char(WORKDATE, 'YYYY-MM-DD') beg_date,
+			       to_char(RESTDATE, 'YYYY-MM-DD') end_date,
+			       DEVRACKID rack_id,
+			       dbo.sf('pw_switch', 'DEVRACKID', pw_switch.DEVRACKID, null) rack_name,
+			       dbo.sf('pw_switch', 'VENDORMODELID', pw_switch.VENDORMODELID, null) model,
+			       SN station_id,
+			       dbo.sf('pw_switch', 'SN', pw_switch.SN, null) station_name
+			  from pw_switch
+			 inner join (select deviceid pw_switch0001, rownum_ PAM_ROWNUM
+			               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+			                            deviceid
+			                       from pw_switch
+			                      WHERE    1=1 
+			             ]]>
+			             	<if test="station_id !=null and station_id !='' ">
+			             		and sn = #{station_id}
+			             	</if>
+			                
+			                <if test="station_name !=null and station_name !='' ">
+			                	and dbo.sf('pw_switch', 'SN', pw_switch.SN, null) like   '%'|| #{station_name} ||'%'
+			                </if>    
+			                 
+			                 
+			                 <if test="power_id !=null and power_id !='' ">
+			             		and DEVICEID = #{power_id}
+			             	</if>
+			                 
+			                  <if test="power_name !=null and power_name !='' ">
+			             		and DEVICENAME  like '%'|| #{power_name} ||'%'
+			             	</if>
+			              
+			                <if test="power_type !=null and power_type !='' ">
+			             		and dbo.sf('pw_switch', 'devtype', DEVTYPE, null)   = #{power_type}
+			             	</if>
+			                    
+			                 
+			                 
+			                 <if test="user_id !=null and user_id !='' ">
+			     				and manatype in  <include refid="RMPower_userSql" />            
+			                 </if>         
+			                 
+			          <![CDATA[ ) ir ]]>
+			          
+				<include refid="RMPower_pageSql" />
+			   
+			   <![CDATA[       ) kr
+			    on pw_switch.deviceid = kr.pw_switch0001
+			 order by kr.PAM_ROWNUM ]]>
+	</select>
+
+
+	<!-- 6.1.8.2 电源负载查询 -->
+	<select id="getAllPowerLoadsSqlId" parameterType="Map" resultType="java.util.HashMap">
+	 	<![CDATA[ 
+		  		select cablename load_id,
+				       (case
+				         when a_devresid = 'PW_SWITCH' then
+				          (select h.devicename
+				             from PW_SWITCH h
+				            where h.deviceid = PWS_CABLE.a_Devinsid)
+				         else
+				          (select h.devicename
+				             from PW_SWITCH h
+				            where h.deviceid = PWS_CABLE.b_Devinsid)
+				       end) power_name,
+				       (case
+				         when a_devresid = 'PW_SWITCH' then
+				          a_Devinsid
+				         else
+				          b_Devinsid
+				       end) power_id,
+				       (case
+				         when a_devresid = 'PW_SWITCH' then
+				          dbo.sr(b_devresid, b_Devinsid)
+				         else
+				          dbo.sr(a_devresid, a_Devinsid)
+				       end) equip_name,
+				       (case
+				         when a_devresid = 'PW_SWITCH' then
+				          b_Devinsid
+				         else
+				          a_Devinsid
+				       end) equip_id,
+				       sn station_id,
+				       dbo.sr('COM_STATION', SN) station_name,
+				       a_mroomid room_id,
+				       dbo.sr('COM_MROOM', a_mroomid) room_name
+				  from PWS_CABLE
+				 inner join (select cableid PWS_CABLE0001, rownum_ PAM_ROWNUM
+				               from (select ROW_NUMBER() OVER(order by rownum) + 0 AS rownum_,
+				                            cableid
+				                       from PWS_CABLE
+				                      WHERE ( 1=1
+				                            and (a_devresid = 'PW_SWITCH' or  b_devresid = 'PW_SWITCH') 
+				                            and (a_devresid in ('DATA_DEV', 'TR_SDH', 'PCM') or  b_devresid in ('DATA_DEV', 'TR_SDH', 'PCM'))
+				                            and a_mroomid = b_mroomid)
+							]]>
+				               
+				                         <if test="equip_id !=null and equip_id !='' ">		               
+				                            and (case when a_devresid = 'PW_SWITCH' then b_Devinsid  else a_Devinsid  end) = #{equip_id}
+				               			 </if>	
+				               			 
+				               			 <if test="power_id !=null and power_id !='' ">		  
+				               				and (case
+				                                      when a_devresid = 'PW_SWITCH' then
+				                                       a_Devinsid
+				                                      else
+				                                       b_Devinsid
+				                                    end) = #{power_id}
+				               			 </if>	
+				               			 
+				               			 <if test="equip_name !=null and equip_name !='' ">
+				                            and (case
+				                                    when a_devresid = 'PW_SWITCH' then
+				                                     dbo.sr(b_devresid, b_Devinsid)
+				                                    else
+				                                     dbo.sr(a_devresid, a_Devinsid)
+				                                  end) like '%'|| #{equip_name} ||'%'
+				                         </if>
+				                         
+				                         <if test="power_name !=null and power_name !='' ">
+				                       	    and (case
+				                                  when a_devresid = 'PW_SWITCH' then
+				                                   (select h.devicename
+				                                      from PW_SWITCH h
+				                                     where h.deviceid = PWS_CABLE.a_Devinsid)
+				                                  else
+				                                   (select h.devicename
+				                                      from PW_SWITCH h
+				                                     where h.deviceid = PWS_CABLE.b_Devinsid)
+				                                end) like '%'|| #{power_name} ||'%'
+				                          </if>
+				                          
+				                          <if test="user_id !=null and user_id !='' ">
+				                          	   and (select n.manatype  from com_station n  where n.sn = PWS_CABLE.sn) in <include refid="RMPower_userSql" />
+				                          </if>
+				                          	   
+				            <![CDATA[ ) ir ]]>
+			 
+			 
+				    <include refid="RMPower_pageSql" />
+				    
+			<![CDATA[  ) kr
+				    on PWS_CABLE.cableid = kr.PWS_CABLE0001
+				 order by kr.PAM_ROWNUM
+						  		
+		]]>
+	</select>
+
+
+	<!-- 6.1.8.3 电源基本信息修改  目前只有 调管单位 、和设备容量 -->
+	<update id="changePowerInfoSqlId" parameterType="Map" >
+		update pw_switch   
+   			  <trim prefix="set" suffixOverrides=",">
+			  	<if test="disp_dept != null and disp_dept !='' "> MANATYPE = #{disp_dept},</if>
+			  	<if test="capacity !=null and capacity !='' "> KWPERPORT = #{capacity},</if>
+			 </trim>
+		 where DEVICEID = #{power_id}
+	</update>
+
+</mapper>
